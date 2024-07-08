@@ -24,7 +24,7 @@ function jogar(escolhaUsuario) {
         var chanceDeGanhar = Math.random() * 100;
         if ((escolhaUsuario === "par" && paridadeNumero === "par") ||
             (escolhaUsuario === "ímpar" && paridadeNumero === "ímpar")) {
-            if (chanceDeGanhar < 99) {
+            if (chanceDeGanhar < 87.1) {
                 ganhou = true;
             }
         }
