@@ -48,9 +48,9 @@ header h1 {
 .jogo {
     background-color: rgb(24, 24, 24);
     height: 300px;
-    width: auto;
+    width: 500px;
     border: 1px solid #ddd;
-    margin: 50px;
+    margin: 50px auto;
     border-radius: 20px;
 }
 
@@ -61,17 +61,9 @@ header h1 {
     font-size: 45px;
     font-family: "Oswald", sans-serif;
 }
-
-.escolha {
-    text-align: center;
-    color: white;
-    margin: 20px 0;
-    font-size: 30px;
-    font-family: "Oswald", sans-serif;
-}
-
 .pi {
     text-align: center;
+    margin-top: 20px;
 }
 
 .par {
@@ -79,7 +71,7 @@ header h1 {
     width: 50px;
     background-color: #272C37;
     color: white;
-    border-radius: 5px;
+    border-radius: 5px; 
     font-family: "Oswald", sans-serif;
     font-size: 25px;
     margin: 0 20px;
@@ -102,6 +94,59 @@ header h1 {
     color: white;
     font-size: 20px;
     font-family: "Oswald", sans-serif;
+}
+
+.iresult{
+    border-radius: 5px;
+    margin: 5px;
+}
+.relatorio {
+    background-color: rgb(24, 24, 24);
+    height: 200px;
+    width: 500px;
+    border: 1px solid #ddd;
+    margin: 50px auto;
+    border-radius: 20px;
+}
+
+.tit-relatorio {
+    text-align: center;
+    color: white;
+    font-family: "Oswald", sans-serif;
+    margin: 15px;
+    font-size: 40px;
+}
+
+.paragrafos {
+    display: flex;
+    align-items: center;
+    font-size: 20px;
+}
+
+.parav {
+    flex: 1;
+    padding-top: 30px;
+    padding-left:50px;
+    font-family: 'Oswald', sans-serif;
+    text-align: center;
+    color: green;
+}
+
+.parad {
+    flex: 1;
+    padding-top: 30px;
+    font-family: 'Oswald', sans-serif;
+    text-align: centerd;
+    color: red;
+}
+
+
+#vitorias {
+    color: green;
+}
+
+#derrotas {
+    color: red;
 }
 
 @media screen and (max-width: 550px){
