@@ -21,11 +21,7 @@ function jogar(escolhaUsuario) {
         var ganhou = false;
         var paridadeNumero = numeroComputador % 2 === 0 ? 'par' : 'ímpar';
 
-        // Gerar um número aleatório entre 0 e 99
         var chanceDeGanhar = Math.random() * 100;
-
-        // Ajuste para ter aproximadamente 49% de chance de ganhar
-        // 49% de chance de ganhar corresponde a uma faixa de 0 a 48.99
         if ((escolhaUsuario === "par" && paridadeNumero === "par") ||
             (escolhaUsuario === "ímpar" && paridadeNumero === "ímpar")) {
             if (chanceDeGanhar < 92) {
@@ -51,4 +47,3 @@ function atualizarRelatorio() {
     document.getElementById("vitorias").innerHTML = vitorias;
     document.getElementById("derrotas").innerHTML = derrotas;
 }
-
