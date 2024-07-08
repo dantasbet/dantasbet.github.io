@@ -151,12 +151,17 @@ header h1 {
 
 @media screen and (max-width: 550px){
     .jogo {
-        height: 400px;
-        width: auto;
+        height: 310px;
+        width: 390px;
     }
 
     .tit-double {
          font-size: 50px;
          margin-left: 30px;
+    }
+
+    .relatorio {
+        height: 200px;
+        width: 390px;
     }
 }
