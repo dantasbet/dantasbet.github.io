@@ -124,7 +124,7 @@ header h1 {
 .separador2 {
     border: none;
     border-top: 2px solid #ccc;
-    margin: 0; /* Remove margens para evitar sobreposição */
+    margin: 0; 
 }
 
 .tit-histo {
@@ -132,18 +132,21 @@ header h1 {
     color: white;
     font-family: "Oswald", sans-serif;
     text-align: left;
-    margin: 15px 0 0 10px; /* Ajusta a margem superior para garantir que o título esteja abaixo do separador */
+    margin: 15px 0 0 10px;
 }
 
 #historico-lista {
     list-style-type: none;
     padding: 0;
     display: flex;
-    flex-direction: row-reverse;
-    gap: 10px;
-    overflow-x: auto;
+    flex-direction: row;
+    gap: 10px; 
+    overflow-x: auto; 
+    justify-content: flex-start;
+    align-items: center;
     padding: 15px;
 }
+
 
 #historico-lista li {
     display: flex;
@@ -151,9 +154,9 @@ header h1 {
 }
 
 #historico-lista img {
-    width: 30px; /* Ajusta o tamanho das imagens */
+    width: 30px;
     height: 30px;
-    object-fit: cover; /* Mantém a qualidade da imagem */
+    object-fit: cover; 
     border-radius: 5px;
 }
 

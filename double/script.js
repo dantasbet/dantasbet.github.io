@@ -1,6 +1,6 @@
 var vitorias = 0;
 var derrotas = 0;
-var historico = []; // Array para armazenar o histórico dos últimos números
+var historicoNumeros = [];
 
 function escolherVermelho() {
     jogar("vermelho");
@@ -11,32 +11,31 @@ function escolherPreto() {
 }
 
 function jogar(escolhaUsuario) {
-    var numeroComputador = Math.floor(Math.random() * 37);
+    var numeroComputador = Math.floor(Math.random() * 37); // Gera um número entre 0 e 36
+    var corComputador = numeroComputador === 0 ? null : (numeroComputador % 2 === 0 ? "preto" : "vermelho"); // Define a cor com base na paridade, ou null se for 0
     var mensagem = `Você escolheu ${escolhaUsuario}.<br>`;
     mensagem += `<img src="img/${numeroComputador}.png" alt="${numeroComputador}" width="50" height="50" class="iresult"><br>`;
 
+    // Adiciona o número ao histórico
+    if (historicoNumeros.length >= 12) {
+        historicoNumeros.shift(); // Remove o número mais antigo se houver 12 números no histórico
+    }
+    historicoNumeros.push(numeroComputador);
+    atualizarHistorico();
+
+    // Verifica se o usuário ganhou ou perdeu
     if (numeroComputador === 0) {
         mensagem += "Você perdeu!";
         derrotas++;
+    } else if (escolhaUsuario === corComputador) {
+        mensagem += "Você ganhou!";
+        vitorias++;
     } else {
-        var corNumero = numeroComputador % 2 === 0 ? 'preto' : 'vermelho';
-
-        // Verificação direta da escolha do usuário
-        if (escolhaUsuario === corNumero) {
-            mensagem += "Você ganhou!";
-            vitorias++;
-        } else {
-            mensagem += "Você perdeu!";
-            derrotas++;
-        }
+        mensagem += "Você perdeu!";
+        derrotas++;
     }
 
-    // Atualizar o histórico com o número atual
-    atualizarHistorico(numeroComputador);
-
     atualizarRelatorio();
-    atualizarHistoricoNaTela();
-
     document.getElementById("resultado").innerHTML = mensagem;
 }
 
@@ -45,26 +44,15 @@ function atualizarRelatorio() {
     document.getElementById("derrotas").innerHTML = derrotas;
 }
 
-function atualizarHistorico(numero) {
-    // Adicionar o número ao início do histórico
-    historico.unshift(numero);
-
-    // Limitar o histórico a um tamanho máximo de 12 números
-    if (historico.length > 12) {
-        historico.pop();
-    }
-}
-
-function atualizarHistoricoNaTela() {
-    var listaHistorico = document.getElementById("historico-lista");
-    listaHistorico.innerHTML = ''; // Limpa a lista antes de adicionar novos itens
-
-    for (var i = 0; i < historico.length; i++) {
-        var li = document.createElement("li");
+function atualizarHistorico() {
+    var historicoLista = document.getElementById("historico-lista");
+    historicoLista.innerHTML = ""; // Limpa a lista atual
+    historicoNumeros.forEach(function(numero) {
+        var listItem = document.createElement("li");
         var img = document.createElement("img");
-        img.src = `img/${historico[i]}.png`;
-        img.alt = historico[i];
-        li.appendChild(img);
-        listaHistorico.appendChild(li);
-    }
+        img.src = `img/${numero}.png`; // Atualiza o caminho da imagem conforme necessário
+        img.alt = numero;
+        listItem.appendChild(img);
+        historicoLista.appendChild(listItem);
+    });
 }
