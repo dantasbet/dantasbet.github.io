@@ -15,18 +15,22 @@ function jogar(escolhaUsuario) {
     var mensagem = `Você escolheu ${escolhaUsuario}.<br>`;
     mensagem += `<img src="img/${numeroComputador}.png" alt="${numeroComputador}" width="50" height="50" class="iresult"><br>`;
 
-    // Determinar se o usuário vai ganhar ou perder antes da escolha
-    var vaiGanhar = Math.random() * 100 < chanceDeGanhar;
-
     if (numeroComputador === 0) {
         mensagem += "Você perdeu!";
         derrotas++;
     } else {
         var paridadeNumero = numeroComputador % 2 === 0 ? 'par' : 'ímpar';
-
-        if (vaiGanhar && escolhaUsuario === paridadeNumero) {
-            mensagem += "Você ganhou!";
-            vitorias++;
+        
+        // Determinar se o usuário vai ganhar baseado na chance, se a paridade coincidir
+        if (escolhaUsuario === paridadeNumero) {
+            var vaiGanhar = Math.random() * 100 < chanceDeGanhar;
+            if (vaiGanhar) {
+                mensagem += "Você ganhou!";
+                vitorias++;
+            } else {
+                mensagem += "Você perdeu!";
+                derrotas++;
+            }
         } else {
             mensagem += "Você perdeu!";
             derrotas++;
