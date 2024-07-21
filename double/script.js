@@ -1,6 +1,5 @@
 var vitorias = 0;
 var derrotas = 0;
-var chanceDeGanhar = 70; // Chance de ganhar em porcentagem (0 a 100)
 
 function escolherPar() {
     jogar("par");
@@ -20,17 +19,11 @@ function jogar(escolhaUsuario) {
         derrotas++;
     } else {
         var paridadeNumero = numeroComputador % 2 === 0 ? 'par' : 'ímpar';
-        
-        // Determinar se o usuário vai ganhar baseado na chance, se a paridade coincidir
+
+        // Verificação direta da escolha do usuário
         if (escolhaUsuario === paridadeNumero) {
-            var vaiGanhar = Math.random() * 100 < chanceDeGanhar;
-            if (vaiGanhar) {
-                mensagem += "Você ganhou!";
-                vitorias++;
-            } else {
-                mensagem += "Você perdeu!";
-                derrotas++;
-            }
+            mensagem += "Você ganhou!";
+            vitorias++;
         } else {
             mensagem += "Você perdeu!";
             derrotas++;
