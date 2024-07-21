@@ -1,6 +1,6 @@
 var vitorias = 0;
 var derrotas = 0;
-var chanceDeGanhar = 92; // Chance de ganhar em porcentagem (0 a 100)
+var chanceDeGanhar = 70; // Chance de ganhar em porcentagem (0 a 100)
 
 function escolherPar() {
     jogar("par");
