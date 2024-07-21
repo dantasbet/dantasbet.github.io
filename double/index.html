@@ -17,22 +17,29 @@
 
     <main>
         <div class="jogo">
-            <h1 class="sec-tit-double">Double: Par ou Impar</h1>
+            <h1 class="sec-tit-double">Double: Vermelho ou Preto</h1>
             <div class="pi">
-                <button onclick="escolherPar()" class="par">Par</button>
-                <button onclick="escolherImpar()" class="impar">Impar</button>
+                <button onclick="escolherPreto()" class="preto">Preto</button>
+                <button onclick="escolherVermelho()" class="vermelho">Vermelho</button>
             </div>
             <p id="resultado" class="resultado"></p>
         </div>
 
         <div class="relatorio">
-            <h1 class="tit-relatorio">Historico</h1>
+            <h1 class="tit-relatorio">Histórico</h1>
             <div class="paragrafos">
-                <p class="parav">Vitorias: <span id="vitorias">0</span></p>
+                <p class="parav">Vitórias: <span id="vitorias">0</span></p>
                 <div class="linha-vertical"></div>
-                <p class="parad">derrotas: <span id="derrotas">0</span></p>
+                <p class="parad">Derrotas: <span id="derrotas">0</span></p>
+            </div>
+            <!-- Adiciona a seção de histórico aqui -->
+            <div id="historico" class="historico">
+                <hr class="separador2">
+                <h2 class="tit-histo">Últimos Números:</h2>
+                <ul id="historico-lista"></ul>
             </div>
         </div>
+        
     </main>
 
     <script src="script.js"></script>
