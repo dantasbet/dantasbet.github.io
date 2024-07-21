@@ -1,5 +1,6 @@
 var vitorias = 0;
 var derrotas = 0;
+var chanceDeGanhar = 95; 
 
 function escolherPar() {
     jogar("par");
@@ -18,15 +19,12 @@ function jogar(escolhaUsuario) {
         mensagem += "Você perdeu!";
         derrotas++;
     } else {
-        var ganhou = false;
         var paridadeNumero = numeroComputador % 2 === 0 ? 'par' : 'ímpar';
+        var ganhou = false;
 
-        var chanceDeGanhar = Math.random() * 100;
-        if ((escolhaUsuario === "par" && paridadeNumero === "par") ||
-            (escolhaUsuario === "ímpar" && paridadeNumero === "ímpar")) {
-            if (chanceDeGanhar <= 95) {
-                ganhou = true;
-            }
+        // Determinar se o usuário ganha baseado na chance
+        if ((escolhaUsuario === paridadeNumero) && (Math.random() * 100 < chanceDeGanhar)) {
+            ganhou = true;
         }
 
         if (ganhou) {
