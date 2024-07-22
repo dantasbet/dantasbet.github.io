@@ -9,20 +9,35 @@
 <body>
     <header>
         <a href="../index.html">
-            <img src="../img/dantasdabet.png" alt="logo" class="ilogo"></a>
+            <img src="../img/dantasdabet.png" alt="logo" class="ilogo">
+        </a>
         <h1 class="tit-double">Double</h1>
+        <div class="header-saldo">
+            <p class="saldo-texto">Saldo: <span id="saldo">R$0,00</span></p>
+            <div id="definir-saldo">
+                <input type="number" id="inputSaldo" min="1" placeholder="Valor" class="input-saldo">
+                <button onclick="definirSaldo()" class="btn-definir-saldo">Adicionar</button>
+            </div>
+        </div>
     </header>
 
     <hr class="separador">
 
     <main>
+        
         <div class="jogo">
             <h1 class="sec-tit-double">Double: Vermelho ou Preto</h1>
+            <div class="pi">
+                <label for="valorAposta" class="label-aposta">Quantia:</label>
+                <input type="number" id="valorAposta" min="1" placeholder="R$" class="input-aposta">
+            </div>
             <div class="pi">
                 <button onclick="escolherPreto()" class="preto">Preto</button>
                 <button onclick="escolherVermelho()" class="vermelho">Vermelho</button>
             </div>
             <p id="resultado" class="resultado"></p>
+            
+        <div class="mensagem-parabens" id="mensagem-parabens"></div>
         </div>
 
         <div class="relatorio">
@@ -32,14 +47,18 @@
                 <div class="linha-vertical"></div>
                 <p class="parad">Derrotas: <span id="derrotas">0</span></p>
             </div>
-            <!-- Adiciona a seção de histórico aqui -->
             <div id="historico" class="historico">
                 <hr class="separador2">
                 <h2 class="tit-histo">Últimos Números:</h2>
                 <ul id="historico-lista"></ul>
             </div>
         </div>
-        
+
+        <p id="ganho" class="ganho"></p>
+
+
+        <button onclick="resetarSessao()" class="btn-resetar">Resetar Sessão</button>
+
     </main>
 
     <script src="script.js"></script>
