@@ -1,8 +1,8 @@
-
 * {
     margin: 0;
     padding: 0;
     border: 0;
+    box-sizing: border-box;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
@@ -27,13 +27,13 @@ header img {
     position: absolute;
     top: 10px;
     left: 10px;
-    height: 120px;
+    height: 80px;
     width: auto;
 }
 
 header h1 {
     margin: 20px 0 10px;
-    font-size: 60px;
+    font-size: 40px;
     color: white;
 }
 
@@ -71,35 +71,46 @@ header h1 {
     cursor: pointer;
 }
 
-
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
 
 .jogo {
     background-color: rgb(24, 24, 24);
-    height: auto;
-    width: 500px;
+    width: 100%;
+    max-width: 500px;
     border: 1px solid #ddd;
-    margin: 50px auto;
+    margin-top: 20px;
     border-radius: 20px;
-    padding-bottom: 20px;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .sec-tit-double {
     text-align: center;
     margin-top: 20px;
     color: white;
-    font-size: 30px;
+    font-size: 24px;
 }
 
 .pi {
     text-align: center;
     margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .input-aposta {
     height: 30px;
-    width: 100px;
+    width: 80px;
     border-radius: 5px;
-    font-size: 20px;
+    font-size: 16px;
     text-align: center;
     margin: 10px;
     background-color: #272C37;
@@ -112,47 +123,65 @@ header h1 {
     font-size: 22px;
 }
 
-.preto {
-    height: 30px;
-    width: 70px;
-    background-color: #272C37;
-    color: white;
-    border-radius: 5px;
-    font-size: 25px;
-    margin: 0 20px;
-}
-
-.vermelho {
+.preto, .vermelho {
     height: 30px;
     width: 110px;
     background-color: #ae2424;
     color: white;
     border-radius: 5px;
-    font-size: 25px;
-    margin: 0 20px;
+    font-size: 18px;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.preto {
+    background-color: #272C37;
+}
+
+.preto.desativado, .vermelho.desativado {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.btn-aposta {
+    height: 30px;
+    width: 80px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-aposta:hover {
+    background-color: #45a049;
 }
 
 .resultado {
     text-align: center;
     margin: 10px;
     color: white;
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .relatorio {
     background-color: rgb(24, 24, 24);
-    height: 300px;
-    width: 500px;
+    width: 100%;
+    max-width: 500px;
     border: 1px solid #ddd;
-    margin: 50px auto;
+    margin-top: 20px;
     border-radius: 20px;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .tit-relatorio {
     text-align: center;
     color: white;
-    margin: 15px;
-    font-size: 40px ;
+    margin: 15px 0;
+    font-size: 30px;
 }
 
 .historico {
@@ -193,111 +222,141 @@ header h1 {
     width: 30px;
     height: 30px;
     object-fit: cover;
-    border-radius: 5px;
+    border-radius: 50%;
+    border: 2px solid white;
 }
 
-.paragrafos {
-    display: flex;
-    align-items: center;
-    font-size: 20px;
-    margin: auto;
-}
-
-.parav {
-    flex: 1;
-    padding-top: 10px;
-    font-family: 'Oswald', sans-serif;
+.mensagem-parabens {
+    display: none;
     text-align: center;
-    color: green;
+    color: white;
+    font-size: 18px;
+    margin: 10px;
+    animation: fadeInOut 3s ease-in-out;
 }
 
-.parad {
-    flex: 1;
-    padding-top: 10px;
-    font-family: 'Oswald', sans-serif;
-    text-align: center;
-    color: red;
-}
-
-#vitorias {
-    color: green;
-}
-
-#derrotas {
-    color: red;
+@keyframes fadeInOut {
+    0%, 100% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 .ganho {
     text-align: center;
-    color: gold;
-    font-size: 25px;
-    display: none;
+    color: green;
+    font-size: 18px;
+    margin-top: 10px;
 }
 
-.mensagem-parabens {
-    text-align: center;
-    color: gold;
-    font-size: 25px;
-    display: none;
-    margin-bottom: 20px;
+.linha-vertical {
+    display: inline-block;
+    border-left: 2px solid white;
+    height: 30px;
+    margin: 0 20px;
+}
+
+.paragrafos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 18px;
+}
+
+.parav, .parad {
+    margin: 0 10px;
+    font-size: 20px;
+    color: white;
+}
+
+.separador {
+    border: none;
+    border-top: 2px solid #333;
+    margin: 0;
+}
+
+.ilogo {
+    max-height: 80px;
+    max-width: 160px;
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .btn-resetar {
     display: block;
     margin: 20px auto;
-    height: 40px;
-    width: 150px;
-    background-color: #f44336; 
+    padding: 10px 20px;
+    font-size: 20px;
+    background-color: #d9534f;
     color: white;
-    border-radius: 5px;
-    font-size: 18px;
     border: none;
+    border-radius: 5px;
     cursor: pointer;
 }
 
-@media screen and (max-width: 550px) {
-    .jogo {
-        width: 390px;
-    }
+.btn-resetar:hover {
+    background-color: #c9302c;
+}
 
+.contador {
+    text-align: center;
+    color: white;
+    font-size: 20px;
+    margin-top: 10px;
+}
+
+
+@media (max-width: 768px) {
     header {
-        padding: 15px;
-    }
-
-    header img {
-        height: 100px;
-        left: 5px;
-    }
-
-    header h1 {
-        font-size: 40px;
+        padding: 10px;
+        height: auto;
     }
 
     .header-saldo {
+        top: 10px;
+        right: 10px;
+        font-size: 16px;
         position: static;
-        margin-top: 10px;
+        margin-bottom: 10px;
     }
 
-    .saldo-texto {
-        font-size: 18px;
+    header h1 {
+        font-size: 32px;
     }
 
-    .input-saldo, .btn-definir-saldo {
-        width: 100%;
-        margin: 5px 0;
+    .jogo, .relatorio {
+        max-width: 100%;
+        padding: 10px;
+    }
+
+    .sec-tit-double, .tit-relatorio {
+        font-size: 20px;
+    }
+
+    .paragrafos {
+        font-size: 16px;
     }
 
     .input-aposta {
         height: 30px;
-        width: 120px;
-        font-size: 16px;
+        width: 50px; 
+        margin: 10px 0; 
     }
 
-    .preto, .vermelho {
-        font-size: 16px;
+    .btn-aposta{
+        height: 30px;
+        width: 50px;
+        margin: 2px;
+        font-size: 14px;
     }
 
-    .relatorio {
-        width: 390px;
+    .pi {
+        flex-direction: row; 
+        gap: 10px;
     }
 }
