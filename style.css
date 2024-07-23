@@ -11,9 +11,10 @@ body {
 }
 
 header {
-    padding: 20px;
+    padding: 10px;
     text-align: center;
     position: relative;
+    background-color: #333;
 }
 
 header img {
@@ -40,11 +41,6 @@ header h1 {
 }
 
 
-.separador {
-    border: none;
-    border-top: 3px solid #ccc;
-    margin: -40px 0 0px;
-}
 
 main {
     padding: 20px;
