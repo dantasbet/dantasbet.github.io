@@ -82,6 +82,22 @@ main {
     font-family: "Oswald", sans-serif;
 }
 
+footer {
+            background-color: #1f242c;
+            color: #e0e0e0;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .termos {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .termos:hover {
+            text-decoration: underline;
+        }
+
 
 @media screen and (max-width: 768px){
     .ilogo {
