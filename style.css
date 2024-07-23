@@ -11,7 +11,7 @@ body {
 }
 
 header {
-    padding: 10px;
+    padding: 0.5px;
     text-align: center;
     position: relative;
     background-color: #333;
@@ -81,6 +81,32 @@ main {
     margin-top: 5px;
     font-family: "Oswald", sans-serif;
 }
+
+.separador {
+    border: 1px solid #fff;
+    margin-bottom: 10px;
+}
+
+.rodape {
+    text-align: center;
+    padding: 10px 0px 10px 0px;
+    position: absolute; 
+    bottom: 0; 
+    width: 100%; 
+    box-sizing: border-box; 
+}
+
+.termos {
+    color: white;
+    text-decoration: none;
+    font-family: "Oswald", sans-serif;
+    text-align: center;
+}
+
+.termos:hover {
+    text-decoration: underline;
+}
+
 
 @media screen and (max-width: 768px){
     .ilogo {
