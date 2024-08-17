@@ -28,36 +28,6 @@ h1 {
 }
 
 .card-button {
-body {
-    font-family: Arial, sans-serif;
-    background-color: #2e2e2e;
-    color: #f0f0f0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
-
-.container {
-    text-align: center;
-    background-color: #444;
-    padding: 20px;
-    border-radius: 10px;
-}
-
-h1 {
-    margin-bottom: 20px;
-}
-
-.card-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.card-button {
     padding: 10px 20px;
     margin: 5px;
     border-radius: 5px;
@@ -67,6 +37,39 @@ h1 {
     cursor: pointer;
     font-size: 18px;
     width: 50px;
+}
+
+.card-button:hover {
+    background-color: #45a049;
+}
+
+.results {
+    margin-bottom: 20px;
+}
+
+.card-history-box {
+    max-width: 300px;
+    overflow-x: auto; /* Permite rolagem horizontal */
+    overflow-y: hidden; /* Oculta rolagem vertical */
+    white-space: nowrap; /* Impede quebras de linha */
+    border: 1px solid #666;
+    padding: 5px;
+    margin: 10px auto;
+    border-radius: 5px;
+    background-color: #333;
+    text-align: right; /* Alinha o texto à direita */
+}
+
+.card-history-content {
+    display: inline-flex; /* Ajusta a exibição para permitir rolagem horizontal */
+    flex-direction: row-reverse; /* Adiciona novos itens à esquerda */
+    align-items: center;
+}
+
+.card-history-content div {
+    display: inline-block;
+    padding: 5px;
+}
 
 input[type="number"] {
     padding: 10px;
