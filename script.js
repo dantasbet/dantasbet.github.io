@@ -47,12 +47,7 @@ function updateCounts() {
     
     // Atualizar o histórico
     const cardHistoryContent = document.getElementById('cardHistory');
-    cardHistoryContent.textContent = '';  // Limpar o conteúdo atual
-    cardHistory.forEach(card => {
-        const cardElement = document.createElement('div');
-        cardElement.textContent = card;
-        cardHistoryContent.appendChild(cardElement);  // Adicionar cada carta no histórico
-    });
+    cardHistoryContent.textContent = cardHistory.join(' ');
 
     // Atualizar o status da contagem
     const countStatus = document.getElementById('countStatus');
