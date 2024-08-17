@@ -1,0 +1,125 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #2e2e2e;
+    color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.container {
+    text-align: center;
+    background-color: #444;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+.card-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.card-button {
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 5px;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    width: 50px;
+}
+
+.card-button:hover {
+    background-color: #45a049;
+}
+
+.results {
+    margin-bottom: 20px;
+}
+
+.card-history-box {
+    max-width: 300px;
+    overflow-x: auto;
+    white-space: nowrap;
+    border: 1px solid #666;
+    padding: 5px;
+    margin: 10px auto;
+    border-radius: 5px;
+    background-color: #333;
+    text-align: left;
+}
+
+.card-history-content {
+    display: inline-block;
+    font-size: 16px;
+    direction: rtl;
+    text-align: right;
+}
+
+input[type="number"] {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+    border: none;
+    text-align: center;
+    font-size: 16px;
+    width: 50px;
+}
+
+button#reset {
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 5px;
+    border: none;
+    background-color: #ff6347;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+button#reset:hover {
+    background-color: #e04b4a;
+}
+
+.status {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.good {
+    color: #00FF00; /* Verde para bom */
+}
+
+.moderate {
+    color: #FFFF00; /* Amarelo para moderado */
+}
+
+.weak {
+    color: #FFA500; /* Laranja para fraco */
+}
+
+.rum {
+    color: #FF0000; /* Vermelho para rum */
+}
+
+/* Estilo para a imagem de apoio */
+.support-image {
+    margin-top: 20px;
+}
+
+.support-image img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #666;
+    border-radius: 10px;
+}

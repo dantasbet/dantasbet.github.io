@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contador de Cartas - Omega II</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Contador de Cartas - Omega II</h1>
+        <div class="card-buttons">
+            <button class="card-button" data-value="2">2</button>
+            <button class="card-button" data-value="3">3</button>
+            <button class="card-button" data-value="4">4</button>
+            <button class="card-button" data-value="5">5</button>
+            <button class="card-button" data-value="6">6</button>
+            <button class="card-button" data-value="7">7</button>
+            <button class="card-button" data-value="8">8</button>
+            <button class="card-button" data-value="9">9</button>
+            <button class="card-button" data-value="10">10</button>
+            <button class="card-button" data-value="J">J</button>
+            <button class="card-button" data-value="Q">Q</button>
+            <button class="card-button" data-value="K">K</button>
+            <button class="card-button" data-value="A">A</button>
+        </div>
+        <div class="results">
+            <p>Contagem Corrente: <span id="runningCount">0</span></p>
+            <p>Contagem Verdadeira: <span id="trueCount">0</span></p>
+            <div class="card-history-box">
+                <div id="cardHistory" class="card-history-content"></div>
+            </div>
+            <p>Status da Contagem: <span id="countStatus" class="status">Neutro</span></p>
+        </div>
+        <p>Baralhos Restantes: <span id="decksRemaining">8.00</span></p>
+        <button id="reset">Resetar Contagem</button>
+    </div>
+    <!-- Imagem de apoio -->
+    <div class="support-image">
+        <img src="contagem.png" alt="Imagem de Apoio">
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
