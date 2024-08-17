@@ -57,11 +57,8 @@ function updateCounts() {
     } else if (trueCount >= 0) {
         countStatus.textContent = 'Moderado';
         countStatus.className = 'status moderate';
-    } else if (trueCount >= -2) {
+    } else {
         countStatus.textContent = 'Fraco';
         countStatus.className = 'status weak';
-    } else {
-        countStatus.textContent = 'Rum';
-        countStatus.className = 'status rum';
     }
 }
