@@ -56,14 +56,13 @@ h1 {
     margin: 10px auto;
     border-radius: 5px;
     background-color: #333;
-    text-align: left;
+    text-align: right;
 }
 
 .card-history-content {
-    display: inline-block;
-    font-size: 16px;
-    direction: rtl;
-    text-align: right;
+    display: flex;
+    flex-direction: row-reverse; /* Adiciona novos itens à esquerda */
+    align-items: center;
 }
 
 input[type="number"] {
