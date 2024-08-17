@@ -1,5 +1,7 @@
 body {
     font-family: Arial, sans-serif;
+    bbody {
+    font-family: Arial, sans-serif;
     background-color: #2e2e2e;
     color: #f0f0f0;
     display: flex;
@@ -49,9 +51,9 @@ h1 {
 
 .card-history-box {
     max-width: 300px;
-    overflow-x: auto; 
-    overflow-x: auto;
-    white-space: nowrap;
+    overflow-x: auto; /* Permite rolagem horizontal */
+    overflow-y: hidden; /* Oculta rolagem vertical */
+    white-space: nowrap; /* Impede quebras de linha */
     border: 1px solid #666;
     padding: 5px;
     margin: 10px auto;
@@ -61,10 +63,16 @@ h1 {
 }
 
 .card-history-content {
-    display: flex;
+    display: inline-flex; /* Ajusta a exibição para permitir rolagem horizontal */
     flex-direction: row-reverse; /* Adiciona novos itens à esquerda */
     align-items: center;
 }
+
+.card-history-content div {
+    display: inline-block;
+    padding: 5px;
+}
+
 
 input[type="number"] {
     padding: 10px;
