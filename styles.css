@@ -98,17 +98,18 @@ button#reset:hover {
 
 .status {
     font-weight: bold;
-    font-size: 18px;
+    font-size: 20px;
+    margin-top: 20px;
 }
 
-.good {
-    color: #00FF00; /* Verde para bom */
+.status.good {
+    color: green;
 }
 
-.moderate {
-    color: #FFFF00; /* Amarelo para moderado */
+.status.moderate {
+    color: orange;
 }
 
-.weak {
-    color: #FFA500; /* Laranja para fraco */
+.status.neutral {
+    color: red;
 }
