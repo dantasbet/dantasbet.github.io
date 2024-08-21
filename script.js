@@ -47,23 +47,18 @@ function updateCounts() {
     
     // Atualizar o histórico
     const cardHistoryContent = document.getElementById('cardHistory');
-    cardHistoryContent.textContent = '';  // Limpar o conteúdo atual
-    cardHistory.forEach(card => {
-        const cardElement = document.createElement('div');
-        cardElement.textContent = card;
-        cardHistoryContent.appendChild(cardElement);  // Adicionar cada carta no histórico
-    });
+    cardHistoryContent.textContent = cardHistory.join(' ');
 
     // Atualizar o status da contagem
     const countStatus = document.getElementById('countStatus');
-    if (trueCount >= 2) {
-        countStatus.textContent = 'Bom';
+    if (trueCount >= 3) {
+        countStatus.textContent = 'Boa';
         countStatus.className = 'status good';
-    } else if (trueCount >= 0) {
+    } else if (trueCount >= 1) {
         countStatus.textContent = 'Moderado';
         countStatus.className = 'status moderate';
     } else {
-        countStatus.textContent = 'Fraco';
-        countStatus.className = 'status weak';
+        countStatus.textContent = 'Neutro ou Desfavorável';
+        countStatus.className = 'status neutral';
     }
 }
