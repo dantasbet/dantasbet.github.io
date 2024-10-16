@@ -2,6 +2,7 @@ body {
     background-color: #2e2e2e;
 }
 
-.support-image {
-    margin: 20px auto;
+.contagem-img {
+    margin: auto;
+    display: block;
 }
