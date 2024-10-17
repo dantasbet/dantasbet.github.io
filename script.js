@@ -1,4 +1,4 @@
-const API_KEY = '8603c4850f36917a0565bddde8199bfb';  // Insira sua chave da API-Football
+const API_KEY = '8603c4850f36917a0565bddde8199bfb';  //okok
 const BASE_URL = 'https://v3.football.api-sports.io';
 
 // Elementos da interface
