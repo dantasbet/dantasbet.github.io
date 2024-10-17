@@ -1,4 +1,4 @@
-const API_KEY = '8603c4850f36917a0565bddde8199bfb';  // Insira sua chave da API-Football
+const API_KEY = '8603c4850f36917a0565bddde8199bfb'; // Insira sua chave da API-teste
 const BASE_URL = 'https://v3.football.api-sports.io';
 
 // Elementos da interface
@@ -21,6 +21,7 @@ async function fetchAPI(endpoint) {
     if (!response.ok) throw new Error(`Erro: ${response.statusText}`);
 
     const data = await response.json();
+    console.log('Dados recebidos da API:', data); // Log para verificar os dados
     return data.response;
   } catch (error) {
     console.error('Erro ao buscar dados:', error);
@@ -90,5 +91,11 @@ function calcularMedia(stats) {
 // Evento para selecionar a data e carregar ligas
 inputData.addEventListener('change', (e) => {
   const dataEscolhida = e.target.value;
-  carregarLigas(dataEscolhida);
+  if (dataEscolhida) {
+    carregarLigas(dataEscolhida);
+  } else {
+    secaoLigas.classList.add('hidden');
+    secaoJogos.classList.add('hidden');
+    secaoAnalise.classList.add('hidden');
+  }
 });
