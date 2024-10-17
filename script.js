@@ -10,18 +10,33 @@ const secaoAnalise = document.getElementById('analise');
 
 // Função para fazer requisições à API
 async function fetchAPI(endpoint) {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    method: 'GET',
-    headers: { 'x-apisports-key': API_KEY },
-  });
-  const data = await response.json();
-  return data.response;
+  try {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'GET',
+      headers: { 'x-apisports-key': API_KEY },
+    });
+
+    if (!response.ok) throw new Error(`Erro: ${response.statusText}`);
+    
+    const data = await response.json();
+    return data.response;
+  } catch (error) {
+    console.error('Erro ao buscar dados:', error);
+    alert('Erro ao carregar dados. Verifique sua API Key ou tente mais tarde.');
+    return [];
+  }
 }
 
 // Carregar ligas com jogos hoje
 async function carregarLigas() {
-  const ligas = await fetchAPI(`/fixtures?date=${new Date().toISOString().split('T')[0]}`);
-  const ligasUnicas = [...new Set(ligas.map(jogo => jogo.league))];
+  const jogosHoje = await fetchAPI(`/fixtures?date=${new Date().toISOString().split('T')[0]}`);
+
+  if (jogosHoje.length === 0) {
+    listaLigas.innerHTML = '<li>Nenhuma liga com jogos hoje.</li>';
+    return;
+  }
+
+  const ligasUnicas = [...new Map(jogosHoje.map(jogo => [jogo.league.id, jogo.league])).values()];
 
   listaLigas.innerHTML = '';
   ligasUnicas.forEach(league => {
