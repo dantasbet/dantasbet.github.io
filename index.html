@@ -7,27 +7,20 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <h1>Análise Esportiva</h1>
-    </header>
+    <h1>Análise Esportiva</h1>
 
-    <div id="ligas-container">
-        <h2>Escolha uma Liga</h2>
-        <select id="liga-select">
-            <option value="">Selecione uma Liga</option>
-        </select>
-    </div>
+    <label for="data-select">Escolha a Data:</label>
+    <input type="date" id="data-select">
 
-    <div id="jogos-container" style="display: none;">
-        <h2>Escolha um Jogo</h2>
-        <select id="jogo-select">
-            <option value="">Selecione um Jogo</option>
-        </select>
-    </div>
+    <label for="liga-select">Escolha uma Liga:</label>
+    <select id="liga-select"></select>
+
+    <label for="jogo-select">Escolha um Jogo:</label>
+    <select id="jogo-select"></select>
 
     <div id="analise-container" style="display: none;">
         <h2>Análise do Jogo</h2>
-        <div id="resultados"></div>
+        <div id="analise-dados"></div>
     </div>
 
     <script src="script.js"></script>
