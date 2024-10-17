@@ -1,4 +1,4 @@
-const apiKey = 'SUA_API_KEY'; // Substitua pela sua chave API
+const apiKey = '8603c4850f36917a0565bddde8199bfb'; // Substitua pela sua chave API
 
 const ligaSelect = document.getElementById('liga-select');
 const jogoSelect = document.getElementById('jogo-select');
