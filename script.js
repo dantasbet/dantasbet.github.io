@@ -8,6 +8,7 @@ const dadosJogo = document.getElementById('dados-jogo');
 const secaoJogos = document.getElementById('jogos');
 const secaoAnalise = document.getElementById('analise');
 const inputData = document.getElementById('data');
+const secaoLigas = document.getElementById('ligas');
 
 // Função para fazer requisições à API
 async function fetchAPI(endpoint) {
@@ -28,12 +29,13 @@ async function fetchAPI(endpoint) {
   }
 }
 
-// Carregar ligas com base na data selecionada
+// Função para carregar ligas com base na data
 async function carregarLigas(dataEscolhida) {
   const jogosHoje = await fetchAPI(`/fixtures?date=${dataEscolhida}`);
 
   if (jogosHoje.length === 0) {
-    listaLigas.innerHTML = '<li>Nenhuma liga com jogos nessa data.</li>';
+    listaLigas.innerHTML = '<li>Nenhuma liga com jogos nesta data.</li>';
+    secaoLigas.classList.remove('hidden');
     return;
   }
 
@@ -46,11 +48,13 @@ async function carregarLigas(dataEscolhida) {
     li.onclick = () => carregarJogos(league.id, dataEscolhida);
     listaLigas.appendChild(li);
   });
+
+  secaoLigas.classList.remove('hidden');
 }
 
-// Carregar jogos de uma liga específica
+// Função para carregar jogos de uma liga específica
 async function carregarJogos(leagueId, dataEscolhida) {
-  secaoJogos.style.display = 'block';
+  secaoJogos.classList.remove('hidden');
   const jogos = await fetchAPI(`/fixtures?league=${leagueId}&date=${dataEscolhida}`);
 
   listaJogos.innerHTML = '';
@@ -62,24 +66,19 @@ async function carregarJogos(leagueId, dataEscolhida) {
   });
 }
 
-// Mostrar análise do jogo selecionado
+// Função para mostrar análise do jogo selecionado
 async function mostrarAnalise(jogo) {
-  secaoAnalise.style.display = 'block';
+  secaoAnalise.classList.remove('hidden');
   const [homeStats, awayStats] = await Promise.all([
     fetchAPI(`/teams/statistics?team=${jogo.teams.home.id}&league=${jogo.league.id}&season=2023`),
     fetchAPI(`/teams/statistics?team=${jogo.teams.away.id}&league=${jogo.league.id}&season=2023`),
   ]);
 
-  const analiseHTML = `
+  dadosJogo.innerHTML = `
     <h3>${jogo.teams.home.name} vs ${jogo.teams.away.name}</h3>
     <p><strong>Média de Cartões:</strong> ${calcularMedia(homeStats.cards)} / ${calcularMedia(awayStats.cards)}</p>
     <p><strong>Média de Gols:</strong> ${calcularMedia(homeStats.goals)} / ${calcularMedia(awayStats.goals)}</p>
-    <p><strong>Média de Escanteios:</strong> ${calcularMedia(homeStats.corners)} / ${calcularMedia(awayStats.corners)}</p>
-    <p><strong>Vitórias / Derrotas / Empates:</strong> ${homeStats.wins} / ${homeStats.losses} / ${homeStats.draws}</p>
-    <p><strong>Ambos Marcaram:</strong> ${contarAmbosMarcaram(homeStats)} vezes / ${contarAmbosMarcaram(awayStats)} vezes</p>
   `;
-
-  dadosJogo.innerHTML = analiseHTML;
 }
 
 // Funções auxiliares para cálculo
@@ -88,11 +87,7 @@ function calcularMedia(stats) {
   return (total / stats.length).toFixed(2);
 }
 
-function contarAmbosMarcaram(stats) {
-  return stats.filter(jogo => jogo.both_teams_scored).length;
-}
-
-// Adicionar evento ao input de data
+// Evento para selecionar a data e carregar ligas
 inputData.addEventListener('change', (e) => {
   const dataEscolhida = e.target.value;
   carregarLigas(dataEscolhida);

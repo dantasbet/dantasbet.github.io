@@ -1,51 +1,71 @@
-* {
-    box-sizing: border-box;
+/* Estilos básicos */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
     margin: 0;
     padding: 0;
   }
   
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f5;
-    color: #333;
+  header {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 1rem;
   }
   
-  header {
-    background-color: #4caf50;
-    color: white;
-    padding: 1rem;
-    text-align: center;
+  h1, h2 {
+    margin: 0.5rem 0;
   }
   
   main {
-    padding: 1rem;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
   }
   
-  h2 {
-    margin-bottom: 0.5rem;
+  .input-data {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  .input-data input {
+    padding: 8px;
+    font-size: 16px;
   }
   
   ul {
-    list-style-type: none;
-    margin-top: 1rem;
+    list-style: none;
     padding: 0;
   }
   
-  ul li {
-    background-color: #ddd;
-    margin-bottom: 0.5rem;
-    padding: 0.75rem;
-    border-radius: 5px;
+  li {
+    background-color: #eaeaea;
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 4px;
     cursor: pointer;
+    transition: background-color 0.3s;
   }
   
-  ul li:hover {
-    background-color: #bbb;
+  li:hover {
+    background-color: #ddd;
   }
   
-  @media (max-width: 600px) {
-    h1 {
-      font-size: 1.5rem;
-    }
+  footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #333;
+    color: white;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+  }
+  
+  .hidden {
+    display: none;
   }
   

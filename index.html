@@ -7,25 +7,35 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Consulta de Jogos por Data</h1>
+  <header>
+    <h1>Consulta de Jogos por Data</h1>
+  </header>
 
-  <label for="data">Escolha uma data:</label>
-  <input type="date" id="data" />
+  <main>
+    <section class="input-data">
+      <label for="data">Escolha uma data:</label>
+      <input type="date" id="data" />
+    </section>
 
-  <section id="ligas">
-    <h2>Ligas Disponíveis</h2>
-    <ul id="lista-ligas"></ul>
-  </section>
+    <section id="ligas" class="hidden">
+      <h2>Ligas Disponíveis</h2>
+      <ul id="lista-ligas"></ul>
+    </section>
 
-  <section id="jogos" style="display: none;">
-    <h2>Jogos da Liga</h2>
-    <ul id="lista-jogos"></ul>
-  </section>
+    <section id="jogos" class="hidden">
+      <h2>Jogos da Liga</h2>
+      <ul id="lista-jogos"></ul>
+    </section>
 
-  <section id="analise" style="display: none;">
-    <h2>Análise do Jogo</h2>
-    <div id="dados-jogo"></div>
-  </section>
+    <section id="analise" class="hidden">
+      <h2>Análise do Jogo</h2>
+      <div id="dados-jogo"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 - Análise de Jogos com API-Football</p>
+  </footer>
 
   <script src="script.js"></script>
 </body>
