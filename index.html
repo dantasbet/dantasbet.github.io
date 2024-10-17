@@ -3,9 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dantas Bet</title>
+    <title>Palpites em Apostas Esportivas</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    
+    <div id="app">
+        <h1>Escolha uma Liga</h1>
+        <select id="ligaSelect"></select>
+        <button id="carregarJogos">Carregar Jogos</button>
+
+        <h2>Jogos</h2>
+        <ul id="jogosList"></ul>
+
+        <div id="dadosJogo" style="display:none;">
+            <h2>Dados do Jogo</h2>
+            <div id="resultado"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
