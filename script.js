@@ -43,33 +43,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função para buscar jogos da liga selecionada
     async function buscarJogos(ligaId) {
         try {
-            const hoje = new Date().toISOString().split('T')[0];
-            const response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}&league=${ligaId}`, {
+            const hoje = new Date().toISOString().split('T')[0]; 
+            const response = await fetch(`https://v3.football.api-sports.io/fixtures?league=${ligaId}&season=2024&date=${hoje}`, {
                 headers: { 'x-apisports-key': apiKey }
             });
-
+    
             if (!response.ok) {
                 throw new Error('Erro ao buscar os jogos. Verifique sua chave API.');
             }
-
+    
             const data = await response.json();
-            console.log('Jogos da Liga:', data);
-
-            jogoSelect.innerHTML = '<option value="">Selecione um Jogo</option>'; // Resetar opções
-
+            console.log('Jogos da Liga:', data); // Verifica o que a API retornou
+    
+            // Verifica se há jogos
+            if (data.response.length === 0) {
+                alert('Nenhum jogo encontrado para esta liga hoje.');
+                return;
+            }
+    
+            jogoSelect.innerHTML = '<option value="">Selecione um Jogo</option>'; // Reseta opções
+    
+            // Preencher o select com jogos encontrados
             data.response.forEach(jogo => {
                 const option = document.createElement('option');
                 option.value = jogo.fixture.id;
                 option.textContent = `${jogo.teams.home.name} vs ${jogo.teams.away.name}`;
                 jogoSelect.appendChild(option);
             });
-
+    
             jogosContainer.style.display = 'block';
         } catch (error) {
             console.error('Erro:', error);
             alert('Ocorreu um problema ao buscar os jogos.');
         }
     }
+    
 
     // Função para buscar e calcular as médias dos últimos 5 jogos de cada time
     async function calcularMedias(fixtureId) {
