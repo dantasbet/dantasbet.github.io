@@ -1,4 +1,4 @@
-const API_KEY = '8603c4850f36917a0565bddde8199bfb';  //okok
+const API_KEY = '8603c4850f36917a0565bddde8199bfb';  // Insira sua chave da API-Football
 const BASE_URL = 'https://v3.football.api-sports.io';
 
 // Elementos da interface
@@ -7,6 +7,7 @@ const listaJogos = document.getElementById('lista-jogos');
 const dadosJogo = document.getElementById('dados-jogo');
 const secaoJogos = document.getElementById('jogos');
 const secaoAnalise = document.getElementById('analise');
+const inputData = document.getElementById('data');
 
 // Função para fazer requisições à API
 async function fetchAPI(endpoint) {
@@ -17,7 +18,7 @@ async function fetchAPI(endpoint) {
     });
 
     if (!response.ok) throw new Error(`Erro: ${response.statusText}`);
-    
+
     const data = await response.json();
     return data.response;
   } catch (error) {
@@ -27,12 +28,12 @@ async function fetchAPI(endpoint) {
   }
 }
 
-// Carregar ligas com jogos hoje
-async function carregarLigas() {
-  const jogosHoje = await fetchAPI(`/fixtures?date=${new Date().toISOString().split('T')[0]}`);
+// Carregar ligas com base na data selecionada
+async function carregarLigas(dataEscolhida) {
+  const jogosHoje = await fetchAPI(`/fixtures?date=${dataEscolhida}`);
 
   if (jogosHoje.length === 0) {
-    listaLigas.innerHTML = '<li>Nenhuma liga com jogos hoje.</li>';
+    listaLigas.innerHTML = '<li>Nenhuma liga com jogos nessa data.</li>';
     return;
   }
 
@@ -42,15 +43,15 @@ async function carregarLigas() {
   ligasUnicas.forEach(league => {
     const li = document.createElement('li');
     li.textContent = league.name;
-    li.onclick = () => carregarJogos(league.id);
+    li.onclick = () => carregarJogos(league.id, dataEscolhida);
     listaLigas.appendChild(li);
   });
 }
 
 // Carregar jogos de uma liga específica
-async function carregarJogos(leagueId) {
+async function carregarJogos(leagueId, dataEscolhida) {
   secaoJogos.style.display = 'block';
-  const jogos = await fetchAPI(`/fixtures?league=${leagueId}&date=${new Date().toISOString().split('T')[0]}`);
+  const jogos = await fetchAPI(`/fixtures?league=${leagueId}&date=${dataEscolhida}`);
 
   listaJogos.innerHTML = '';
   jogos.forEach(jogo => {
@@ -91,5 +92,8 @@ function contarAmbosMarcaram(stats) {
   return stats.filter(jogo => jogo.both_teams_scored).length;
 }
 
-// Iniciar o carregamento das ligas ao abrir o site
-carregarLigas();
+// Adicionar evento ao input de data
+inputData.addEventListener('change', (e) => {
+  const dataEscolhida = e.target.value;
+  carregarLigas(dataEscolhida);
+});
