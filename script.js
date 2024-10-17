@@ -1,90 +1,93 @@
-const API_KEY = "8603c4850f36917a0565bddde8199bfb"; // Coloque sua chave de API aqui
-const ligaSelect = document.getElementById('ligaSelect');
-const carregarJogosButton = document.getElementById('carregarJogos');
-const jogosList = document.getElementById('jogosList');
-const dadosJogo = document.getElementById('dadosJogo');
-const resultado = document.getElementById('resultado');
+const apiKey = '8603c4850f36917a0565bddde8199bfb'; // Coloque sua chave aqui.
+const ligaSelect = document.getElementById('liga-select');
+const jogoSelect = document.getElementById('jogo-select');
+const jogosContainer = document.getElementById('jogos-container');
+const analiseContainer = document.getElementById('analise-container');
+const resultadosDiv = document.getElementById('resultados');
 
-// Função para buscar ligas com jogos
+// Função para buscar ligas com jogos no dia atual
 async function buscarLigas() {
-    const response = await fetch("https://v3.football.api-sports.io/leagues", {
-        headers: {
-            "x-apisports-key": API_KEY
-        }
+    const hoje = new Date().toISOString().split('T')[0];
+    const response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}`, {
+        headers: { 'x-apisports-key': apiKey }
     });
+    const data = await response.json();
+    const ligas = [...new Set(data.response.map(fixture => fixture.league))];
 
-    if (response.ok) {
-        const data = await response.json();
-        data.response.forEach(liga => {
-            const option = document.createElement('option');
-            option.value = liga.id;
-            option.textContent = liga.name;
-            ligaSelect.appendChild(option);
-        });
-    } else {
-        console.error('Erro ao buscar ligas:', response.status);
-    }
+    ligas.forEach(liga => {
+        const option = document.createElement('option');
+        option.value = liga.id;
+        option.textContent = liga.name;
+        ligaSelect.appendChild(option);
+    });
 }
 
-// Função para buscar jogos de uma liga específica
+// Função para buscar jogos da liga selecionada
 async function buscarJogos(ligaId) {
     const hoje = new Date().toISOString().split('T')[0];
-    const response = await fetch(`https://v3.football.api-sports.io/fixtures?league=${ligaId}&date=${hoje}`, {
-        headers: {
-            "x-apisports-key": API_KEY
-        }
+    const response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}&league=${ligaId}`, {
+        headers: { 'x-apisports-key': apiKey }
+    });
+    const data = await response.json();
+
+    jogoSelect.innerHTML = '<option value="">Selecione um Jogo</option>'; // Resetar opções
+
+    data.response.forEach(jogo => {
+        const option = document.createElement('option');
+        option.value = jogo.fixture.id;
+        option.textContent = `${jogo.teams.home.name} vs ${jogo.teams.away.name}`;
+        jogoSelect.appendChild(option);
     });
 
-    if (response.ok) {
-        const data = await response.json();
-        jogosList.innerHTML = ''; // Limpa a lista de jogos
-        data.response.forEach(jogo => {
-            const li = document.createElement('li');
-            li.textContent = `${jogo.teams.home.name} vs ${jogo.teams.away.name}`;
-            li.addEventListener('click', () => mostrarDadosJogo(jogo));
-            jogosList.appendChild(li);
+    jogosContainer.style.display = 'block';
+}
+
+// Função para buscar e calcular as médias dos últimos 5 jogos de cada time
+async function calcularMedias(fixtureId) {
+    const response = await fetch(`https://v3.football.api-sports.io/fixtures?id=${fixtureId}`, {
+        headers: { 'x-apisports-key': apiKey }
+    });
+    const data = await response.json();
+    const fixture = data.response[0];
+    const times = [fixture.teams.home.id, fixture.teams.away.id];
+
+    let resultados = '';
+
+    for (const time of times) {
+        const statsResponse = await fetch(`https://v3.football.api-sports.io/teams/statistics?team=${time}&season=2023`, {
+            headers: { 'x-apisports-key': apiKey }
         });
-    } else {
-        console.error('Erro ao buscar jogos:', response.status);
+        const stats = await statsResponse.json();
+
+        const ultimos5 = stats.response.fixtures.last_5;
+        const mediaGols = ultimos5.goals / 5;
+        const mediaEscanteios = ultimos5.corners / 5;
+        const mediaCartoes = ultimos5.cards / 5;
+        const ambasMarcaram = ultimos5.both_teams_scored ? 'Sim' : 'Não';
+
+        resultados += `
+            <h3>${fixture.teams.home.name}</h3>
+            <p>Média de Gols: ${mediaGols.toFixed(2)}</p>
+            <p>Média de Escanteios: ${mediaEscanteios.toFixed(2)}</p>
+            <p>Média de Cartões: ${mediaCartoes.toFixed(2)}</p>
+            <p>Ambas Marcaram: ${ambasMarcaram}</p>
+        `;
     }
+
+    resultadosDiv.innerHTML = resultados;
+    analiseContainer.style.display = 'block';
 }
 
-// Função para mostrar dados do jogo
-async function mostrarDadosJogo(jogo) {
-    const ultimosJogosHome = await buscarUltimosJogos(jogo.teams.home.id);
-    const ultimosJogosAway = await buscarUltimosJogos(jogo.teams.away.id);
+// Eventos
+ligaSelect.addEventListener('change', () => {
+    const ligaId = ligaSelect.value;
+    if (ligaId) buscarJogos(ligaId);
+});
 
-    // Calcular médias aqui, e montar a resposta
-    resultado.innerHTML = `
-        <p>Média de Gols - Time A: ${calcularMediaGols(ultimosJogosHome)}</p>
-        <p>Média de Gols - Time B: ${calcularMediaGols(ultimosJogosAway)}</p>
-        <!-- Adicione as outras médias aqui -->
-    `;
-    dadosJogo.style.display = 'block';
-}
+jogoSelect.addEventListener('change', () => {
+    const fixtureId = jogoSelect.value;
+    if (fixtureId) calcularMedias(fixtureId);
+});
 
-// Função para buscar últimos jogos de um time
-async function buscarUltimosJogos(teamId) {
-    const response = await fetch(`https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5`, {
-        headers: {
-            "x-apisports-key": API_KEY
-        }
-    });
-
-    if (response.ok) {
-        return await response.json();
-    } else {
-        console.error('Erro ao buscar últimos jogos:', response.status);
-        return [];
-    }
-}
-
-// Calcular média de gols
-function calcularMediaGols(jogos) {
-    const totalGols = jogos.reduce((total, jogo) => total + jogo.goals.home + jogo.goals.away, 0);
-    return (totalGols / jogos.length).toFixed(2) || 0; // Retorna 0 se não houver jogos
-}
-
-// Carregar ligas ao iniciar
-document.addEventListener('DOMContentLoaded', buscarLigas);
-carregarJogosButton.addEventListener('click', () => buscarJogos(ligaSelect.value));
+// Inicialização
+buscarLigas();
