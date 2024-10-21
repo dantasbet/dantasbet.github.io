@@ -39,8 +39,9 @@ iframe {
 
   @media (max-width: 768px) {
     iframe {
-        width: 80%; /* Ocupa toda a largura disponível */
-        height: 70vh; /* Altura relativa à viewport para manter proporção */
-        margin: 10px 0; /* Espaçamento para evitar colar nas bordas */
+        width: 80%; /* Ocupa 80% da largura da tela */
+        height: 45vh; /* Mantém a proporção de 16:9 */
+        margin: 10px auto; /* Centraliza horizontalmente */
+        display: block; /* Garante que o iframe seja tratado como bloco */
     }
 }
