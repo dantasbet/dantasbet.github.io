@@ -36,3 +36,11 @@ iframe {
     display: block;
     margin: 20px auto; /* Centralizar na horizontal */
   } 
+
+  @media (max-width: 768px) {
+    iframe {
+        width: 100%; /* Ocupa toda a largura disponível */
+        height: 70vh; /* Altura relativa à viewport para manter proporção */
+        margin: 10px 0; /* Espaçamento para evitar colar nas bordas */
+    }
+}
