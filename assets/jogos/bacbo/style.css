@@ -40,7 +40,7 @@ iframe {
   @media (max-width: 768px) {
     iframe {
         width: 80%; /* Ocupa 80% da largura da tela */
-        height: 800px; /* Mantém a proporção de 16:9 */
+        height: 700px; /* Mantém a proporção de 16:9 */
         margin: 10px auto; /* Centraliza horizontalmente */
         display: block; /* Garante que o iframe seja tratado como bloco */
     }
