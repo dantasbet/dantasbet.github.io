@@ -53,3 +53,11 @@ function confirmarNumero() {
 
 // Adiciona o evento de clique ao botão Confirmar
 document.getElementById("confirmarBtn").addEventListener("click", confirmarNumero);
+
+// Adiciona o evento de pressionar Enter no campo de entrada
+document.getElementById("ultimoNumero").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); // Evita o comportamento padrão do Enter
+        confirmarNumero(); // Chama a função confirmarNumero
+    }
+});
