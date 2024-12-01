@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Padrões - Roleta</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1 class="titulo_header"><a href="../../index.html">DantasBet</a></h1>
+    </header>
+
+    <!-- Botões de entrada -->
+    <div>
+        <button id="azul" class="botao">Azul</button>
+        <button id="vermelho" class="botao">Vermelho</button>
+        <button id="empate" class="botao">Empate</button>
+    </div>
+
+    <!-- Recomendação -->
+    <div id="recomendacao">Aguardando dados para gerar recomendações...</div>
+
+    <div class="espaco_casino">
+        <iframe src="https://9f.com/" class="tela_casino"></iframe>
+    </div>
+
+    <!-- Script principal -->
+    <script>
+        let historico = [];
+let modeloTreinado = false;
+let model = null;
+
+// Mapeamento das cores
+const mapaEntrada = {
+    'a': 'azul',
+    'v': 'vermelho',
+    'e': 'empate'  // Empate é nulo e não deve influenciar nas recomendações
+};
+
+// Função para inicializar o modelo LSTM com Dropout
+async function inicializarModelo() {
+    model = tf.sequential();
+
+    // Camada LSTM
+    model.add(tf.layers.lstm({
+        units: 50,
+        inputShape: [1, 2], // Agora temos apenas 2 cores (azul e vermelho)
+        returnSequences: false
+    }));
+
+    // Camada Dropout
+    model.add(tf.layers.dropout({ rate: 0.2 }));
+
+    // Camada densa de saída
+    model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
+
+    model.compile({
+        optimizer: 'adam',
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy']
+    });
+
+    console.log("Modelo LSTM com Dropout inicializado.");
+}
+
+// Função para gerar as features para a entrada do usuário
+function gerarFeatures(entrada) {
+    const categoria = mapaEntrada[entrada];
+    if (categoria === 'azul') {
+        return [1, 0]; // Azul
+    } else if (categoria === 'vermelho') {
+        return [0, 1]; // Vermelho
+    } else {
+        return [0, 0]; // Empate (nulo, não influencia na recomendação)
+    }
+}
+
+// Função para adicionar a entrada e resultado ao histórico
+function adicionarEntrada(entrada) {
+    const features = gerarFeatures(entrada);
+    historico.push(features);
+    if (historico.length > 10) historico.shift(); // Mantém o histórico limitado a 10 jogadas
+}
+
+// Função para treinar o modelo
+async function treinarModelo() {
+    if (historico.length < 2) {
+        console.log("Insira mais dados para treinar o modelo.");
+        return;
+    }
+
+    // Organizar os dados para treinamento (somente azul e vermelho)
+    const inputs = tf.tensor(historico.slice(0, -1)).reshape([-1, 1, 2]); // Apenas azul e vermelho
+    const outputs = tf.tensor(historico.slice(1));
+
+    console.log("Treinando o modelo...");
+    await model.fit(inputs, outputs, {
+        epochs: 50,
+        batchSize: 1
+    });
+
+    modeloTreinado = true;
+    console.log("Modelo treinado com sucesso!");
+    recomendarAposta();
+}
+
+// Função para fazer a recomendação de aposta
+async function recomendarAposta() {
+    if (!modeloTreinado) {
+        console.log("Modelo não treinado.");
+        return;
+    }
+
+    // Pega a última jogada
+    const ultimaJogada = historico[historico.length - 1];
+    const predicao = model.predict(tf.tensor([ultimaJogada]).reshape([1, 1, 2])).argMax(1).dataSync()[0];
+
+    let recomendacao = "Aguardando a próxima jogada...";
+    if (predicao === 0) {
+        recomendacao = "Recomendação: Aposte em azul.";
+    } else if (predicao === 1) {
+        recomendacao = "Recomendação: Aposte em vermelho.";
+    }
+
+    // Atualiza a recomendação na tela
+    document.getElementById('recomendacao').innerText = recomendacao;
+}
+
+// Configura o evento para o botão de Azul
+document.getElementById('azul').addEventListener('click', () => {
+    adicionarEntrada('a');
+    treinarModelo();
+});
+
+// Configura o evento para o botão de Vermelho
+document.getElementById('vermelho').addEventListener('click', () => {
+    adicionarEntrada('v');
+    treinarModelo();
+});
+
+// Configura o evento para o botão de Empate
+document.getElementById('empate').addEventListener('click', () => {
+    adicionarEntrada('e'); // Empate é registrado mas não influencia a recomendação
+});
+
+// Inicializa o modelo
+inicializarModelo();
+    </script>
+</body>
+</html>

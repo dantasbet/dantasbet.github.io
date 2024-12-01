@@ -1,0 +1,48 @@
+* {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+body {
+    background-color: #1B1F27;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+}
+
+header {
+    border-bottom: 2px solid yellow;
+}
+
+.titulo_header {
+    text-align: center;
+    margin: 10px;
+}
+
+.escolha_jogo {
+    margin: 10px;
+}
+.jogos {
+    display: flex;
+    flex-wrap: wrap; /* Para quebrar linha se houver muitos itens */
+    justify-content: center; /* Centraliza os itens horizontalmente */
+    gap: 20px; /* Espaçamento entre as divs */
+    margin: 20px;
+}
+
+.jogo {
+    text-align: center; /* Centraliza o texto em relação à imagem */
+    max-width: 150px; /* Limita a largura da div */
+}
+
+.jogo img {
+    width: 100%; /* Faz a imagem ocupar toda a largura da div */
+    height: auto; /* Mantém a proporção da imagem */
+    border-radius: 8px; /* Adiciona bordas arredondadas (opcional) */
+}
+
+.jogo p {
+    margin-top: 8px; /* Espaçamento entre a imagem e o texto */
+    font-size: 14px; /* Ajusta o tamanho da fonte */
+    color: white;
+}

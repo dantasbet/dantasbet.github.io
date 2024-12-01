@@ -4,26 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dantas Bet</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <header>
         <h1 class="titulo_header">DantasBet</h1>
     </header>
-
+        
     <main>
-        <div class="input_container">
-            <label for="ultimoNumero">Último Número:</label>
-            <input type="number" id="ultimoNumero">
-            <button id="confirmarBtn">OK</button>
-        </div>
-        <div id="resultado"></div>
-        <div class="espaco_casino">
-            <iframe src="https://9f.com/br/web/" class="tela_casino"></iframe>
+        <h2 class="escolha_jogo">Escolha o que você quer jogar:</h2>
+    
+        <div class="jogos">
+            <div class="jogo">
+                <a href="jogos/numeros_puxam/index.html">
+                    <img src="img/roleta.jpg" alt="Números que se puxam">
+                    <p>Números que se puxam</p>
+                </a>
+            </div>
+            <div class="jogo">
+                <a href="jogos/roleta_v_p/index.html">
+                    <img src="img/roleta.jpg" alt="Roleta vermelho e preto">
+                    <p>Roleta vermelho e preto</p>
+                </a>
+            </div>
+            <div class="jogo">
+                <a href="jogos/">
+                    <img src="img/bacbo.jpg" alt="Bac Bo">
+                    <p>Bac Bo</p>
+                </a>
+            </div>
         </div>
     </main>
-
-    <script src="script.js"></script>
-        
+    
 </body>
 </html>
