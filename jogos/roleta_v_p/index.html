@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análise de Padrões - Roleta</title>
+    <title>Vermelho e preto</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -19,8 +19,11 @@
         <button id="zero" class="botao">Zero</button>
     </div>
 
-    <!-- Recomendação -->
-    <div id="recomendacao">Aguardando dados para gerar recomendações...</div>
+    <div id="log-container">
+        <p id="status-log">Status: Aguardando inicialização...</p>
+        <p id="recomendacao">Recomendação: Nenhuma por enquanto.</p>
+    </div>
+    
 
     <div class="espaco_casino">
         <iframe src="https://9f.com/" class="tela_casino"></iframe>
@@ -28,113 +31,107 @@
 
     <!-- Script principal -->
     <script>
-        let historico = [];
-        let modeloTreinado = false;
-        let model = null;
+      let historico = []; // Histórico das jogadas
+let modeloTreinado = false;
+let model; // Modelo TensorFlow.js
 
-        // Mapeamento das cores
-        const mapaEntrada = {
-            'v': 'vermelho',
-            'p': 'preto'
-        };
+// Mapeamento para entradas
+const mapeamentoEntradas = {
+    vermelho: [1, 0], // Representa vermelho
+    preto: [0, 1],    // Representa preto
+    zero: [0, 0]      // Zero é ignorado na recomendação
+};
 
-        // Função para inicializar o modelo LSTM com Dropout
-        async function inicializarModelo() {
-            model = tf.sequential();
+// Mapeamento reverso para previsão
+const mapeamentoSaidas = ["vermelho", "preto"];
 
-            // Camada LSTM
-            model.add(tf.layers.lstm({
-                units: 50,
-                inputShape: [1, 2],
-                returnSequences: false
-            }));
+// Atualiza o status do log
+function atualizarLog(mensagem) {
+    const statusLog = document.getElementById("status-log");
+    statusLog.innerText = `Status: ${mensagem}`;
+}
 
-            // Camada Dropout
-            model.add(tf.layers.dropout({ rate: 0.2 }));
+// Inicializa o modelo
+async function inicializarModelo() {
+    model = tf.sequential();
 
-            // Camada densa de saída
-            model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
+    // Camada de entrada e oculta
+    model.add(tf.layers.dense({ units: 10, inputShape: [2], activation: 'relu' }));
+    model.add(tf.layers.dense({ units: 10, activation: 'relu' }));
 
-            model.compile({
-                optimizer: 'adam',
-                loss: 'categoricalCrossentropy',
-                metrics: ['accuracy']
-            });
+    // Camada de saída
+    model.add(tf.layers.dense({ units: 2, activation: 'softmax' })); // Apenas 2 saídas: vermelho ou preto
 
-            console.log("Modelo LSTM com Dropout inicializado.");
-        }
+    model.compile({
+        optimizer: 'adam',
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy']
+    });
 
-        // Função para gerar as features para a entrada do usuário
-        function gerarFeatures(entrada) {
-            const categoria = mapaEntrada[entrada];
-            return categoria === 'vermelho' ? [1, 0] : [0, 1];
-        }
+    atualizarLog("Modelo inicializado. Aguarde dados de jogadas.");
+}
 
-        // Função para adicionar a entrada e resultado ao histórico
-        function adicionarEntrada(entrada) {
-            const features = gerarFeatures(entrada);
-            historico.push(features);
-            if (historico.length > 10) historico.shift(); // Mantém o histórico limitado a 10 jogadas
-        }
+// Adiciona entrada e treina o modelo
+function adicionarEntrada(entrada) {
+    if (entrada === "zero") {
+        atualizarLog("Entrada ZERO registrada, ignorada na análise.");
+        return; // Ignora o zero na recomendação
+    }
 
-        // Função para treinar o modelo
-        async function treinarModelo() {
-            if (historico.length < 2) {
-                console.log("Insira mais dados para treinar o modelo.");
-                return;
-            }
+    historico.push(mapeamentoEntradas[entrada]);
+    atualizarLog(`Entrada registrada: ${entrada.toUpperCase()}.`);
 
-            // Organizar os dados para treinamento
-            const inputs = tf.tensor(historico.slice(0, -1)).reshape([-1, 1, 2]);
-            const outputs = tf.tensor(historico.slice(1));
+    if (historico.length > 1) treinarModelo(); // Treina a cada rodada
+}
 
-            console.log("Treinando o modelo...");
-            await model.fit(inputs, outputs, {
-                epochs: 50,
-                batchSize: 1
-            });
+// Treina o modelo com o histórico
+async function treinarModelo() {
+    if (historico.length < 2) {
+        atualizarLog("Insira mais dados para treinar o modelo.");
+        return;
+    }
 
-            modeloTreinado = true;
-            console.log("Modelo treinado com sucesso!");
-            recomendarAposta();
-        }
+    // Entradas: todas menos a última
+    const inputs = tf.tensor(historico.slice(0, -1));
 
-        // Função para fazer a recomendação de aposta
-        async function recomendarAposta() {
-            if (!modeloTreinado) {
-                console.log("Modelo não treinado.");
-                return;
-            }
+    // Saídas: todas menos a primeira
+    const outputs = tf.tensor(historico.slice(1));
 
-            // Pega a última jogada
-            const ultimaJogada = historico[historico.length - 1];
-            const predicao = model.predict(tf.tensor([ultimaJogada]).reshape([1, 1, 2])).argMax(1).dataSync()[0];
+    atualizarLog("Treinando o modelo...");
+    await model.fit(inputs, outputs, {
+        epochs: 50,
+        batchSize: 1 // Treina por rodada
+    });
 
-            let recomendacao = "Aguardando a próxima jogada...";
-            if (predicao === 0) {
-                recomendacao = "Recomendação: Aposte em vermelho.";
-            } else if (predicao === 1) {
-                recomendacao = "Recomendação: Aposte em preto.";
-            }
+    modeloTreinado = true;
+    atualizarLog("Modelo treinado com sucesso!");
+    recomendarAposta();
+}
 
-            // Atualiza a recomendação na tela
-            document.getElementById('recomendacao').innerText = recomendacao;
-        }
+// Recomendação com base no modelo
+async function recomendarAposta() {
+    if (!modeloTreinado || historico.length === 0) {
+        document.getElementById("recomendacao").innerText = "Recomendação: Aguardando mais rodadas para recomendações.";
+        return;
+    }
 
-        // Configura o evento para o botão de Vermelho
-        document.getElementById('vermelho').addEventListener('click', () => {
-            adicionarEntrada('v');
-            treinarModelo();
-        });
+    const ultimaJogada = historico[historico.length - 1]; // Última jogada registrada
+    const predicao = model.predict(tf.tensor([ultimaJogada]));
+    const resultado = predicao.argMax(-1).dataSync()[0]; // Índice da previsão
 
-        // Configura o evento para o botão de Preto
-        document.getElementById('preto').addEventListener('click', () => {
-            adicionarEntrada('p');
-            treinarModelo();
-        });
+    const recomendacao = `Recomendação: Aposte em ${mapeamentoSaidas[resultado].toUpperCase()}!`;
+    document.getElementById("recomendacao").innerText = recomendacao;
+    atualizarLog(recomendacao);
+}
 
-        // Inicializa o modelo
-        inicializarModelo();
+// Event listeners para os botões
+document.getElementById("vermelho").addEventListener("click", () => adicionarEntrada("vermelho"));
+document.getElementById("preto").addEventListener("click", () => adicionarEntrada("preto"));
+document.getElementById("zero").addEventListener("click", () => adicionarEntrada("zero"));
+
+// Inicializa o modelo ao carregar a página
+inicializarModelo();
+
     </script>
 </body>
 </html>

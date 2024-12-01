@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análise de Padrões - Roleta</title>
+    <title>Bac Bo</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -18,6 +18,10 @@
         <button id="vermelho" class="botao">Vermelho</button>
         <button id="empate" class="botao">Empate</button>
     </div>
+
+    <div id="log-container">
+        <p id="log-status">Status: Aguardando dados...</p>
+    </div>    
 
     <!-- Recomendação -->
     <div id="recomendacao">Aguardando dados para gerar recomendações...</div>
@@ -34,19 +38,25 @@ let model = null;
 
 // Mapeamento das cores
 const mapaEntrada = {
-    'a': 'azul',
-    'v': 'vermelho',
-    'e': 'empate'  // Empate é nulo e não deve influenciar nas recomendações
+    'azul': [1, 0, 0],    // Azul
+    'vermelho': [0, 1, 0], // Vermelho
+    'empate': [0, 0, 1]    // Empate
 };
 
-// Função para inicializar o modelo LSTM com Dropout
+// Função para exibir mensagens no log
+function atualizarLog(mensagem) {
+    const logStatus = document.getElementById('log-status');
+    logStatus.innerText = `Status: ${mensagem}`;
+}
+
+// Inicializa o modelo LSTM com Dropout
 async function inicializarModelo() {
     model = tf.sequential();
 
     // Camada LSTM
     model.add(tf.layers.lstm({
         units: 50,
-        inputShape: [1, 2], // Agora temos apenas 2 cores (azul e vermelho)
+        inputShape: [1, 3], // 3 categorias: azul, vermelho, empate
         returnSequences: false
     }));
 
@@ -54,7 +64,7 @@ async function inicializarModelo() {
     model.add(tf.layers.dropout({ rate: 0.2 }));
 
     // Camada densa de saída
-    model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
+    model.add(tf.layers.dense({ units: 2, activation: 'softmax' })); // Apenas 2 saídas: azul e vermelho
 
     model.compile({
         optimizer: 'adam',
@@ -62,91 +72,75 @@ async function inicializarModelo() {
         metrics: ['accuracy']
     });
 
-    console.log("Modelo LSTM com Dropout inicializado.");
+    atualizarLog("Modelo inicializado. Aguardando jogadas...");
 }
 
-// Função para gerar as features para a entrada do usuário
-function gerarFeatures(entrada) {
-    const categoria = mapaEntrada[entrada];
-    if (categoria === 'azul') {
-        return [1, 0]; // Azul
-    } else if (categoria === 'vermelho') {
-        return [0, 1]; // Vermelho
-    } else {
-        return [0, 0]; // Empate (nulo, não influencia na recomendação)
-    }
-}
-
-// Função para adicionar a entrada e resultado ao histórico
+// Adiciona entrada ao histórico
 function adicionarEntrada(entrada) {
-    const features = gerarFeatures(entrada);
-    historico.push(features);
-    if (historico.length > 10) historico.shift(); // Mantém o histórico limitado a 10 jogadas
+    const features = mapaEntrada[entrada];
+    if (features) historico.push(features);
+    if (historico.length > 10) historico.shift(); // Mantém no máximo 10 jogadas
+    atualizarLog(`Entrada registrada: ${entrada}.`);
 }
 
-// Função para treinar o modelo
+// Treina o modelo
 async function treinarModelo() {
-    if (historico.length < 2) {
-        console.log("Insira mais dados para treinar o modelo.");
+    // Filtrar entradas: remove empates do treinamento
+    const filtrado = historico.filter((h) => h[2] === 0); // Exclui empates
+    if (filtrado.length < 2) {
+        atualizarLog("Dados insuficientes para treinar o modelo. Registre mais jogadas.");
         return;
     }
 
-    // Organizar os dados para treinamento (somente azul e vermelho)
-    const inputs = tf.tensor(historico.slice(0, -1)).reshape([-1, 1, 2]); // Apenas azul e vermelho
-    const outputs = tf.tensor(historico.slice(1));
+    const inputs = tf.tensor(filtrado.slice(0, -1)).reshape([-1, 1, 3]); // Entradas
+    const outputs = tf.tensor(filtrado.slice(1).map((h) => h.slice(0, 2))); // Saídas (apenas azul e vermelho)
 
-    console.log("Treinando o modelo...");
+    atualizarLog("Treinando o modelo...");
     await model.fit(inputs, outputs, {
         epochs: 50,
         batchSize: 1
     });
 
     modeloTreinado = true;
-    console.log("Modelo treinado com sucesso!");
+    atualizarLog("Modelo treinado com sucesso!");
     recomendarAposta();
 }
 
-// Função para fazer a recomendação de aposta
+// Faz uma recomendação
 async function recomendarAposta() {
     if (!modeloTreinado) {
-        console.log("Modelo não treinado.");
+        atualizarLog("Modelo não treinado.");
         return;
     }
 
-    // Pega a última jogada
     const ultimaJogada = historico[historico.length - 1];
-    const predicao = model.predict(tf.tensor([ultimaJogada]).reshape([1, 1, 2])).argMax(1).dataSync()[0];
+    const predicao = model.predict(tf.tensor([ultimaJogada]).reshape([1, 1, 3])).argMax(1).dataSync()[0];
 
-    let recomendacao = "Aguardando a próxima jogada...";
-    if (predicao === 0) {
-        recomendacao = "Recomendação: Aposte em azul.";
-    } else if (predicao === 1) {
-        recomendacao = "Recomendação: Aposte em vermelho.";
-    }
+    const recomendacao = predicao === 0
+        ? "Recomendação: Aposte em azul."
+        : "Recomendação: Aposte em vermelho.";
 
-    // Atualiza a recomendação na tela
     document.getElementById('recomendacao').innerText = recomendacao;
+    atualizarLog(`Recomendação gerada: ${recomendacao}`);
 }
 
-// Configura o evento para o botão de Azul
+// Configura os eventos dos botões
 document.getElementById('azul').addEventListener('click', () => {
-    adicionarEntrada('a');
+    adicionarEntrada('azul');
     treinarModelo();
 });
-
-// Configura o evento para o botão de Vermelho
 document.getElementById('vermelho').addEventListener('click', () => {
-    adicionarEntrada('v');
+    adicionarEntrada('vermelho');
+    treinarModelo();
+});
+document.getElementById('empate').addEventListener('click', () => {
+    adicionarEntrada('empate');
     treinarModelo();
 });
 
-// Configura o evento para o botão de Empate
-document.getElementById('empate').addEventListener('click', () => {
-    adicionarEntrada('e'); // Empate é registrado mas não influencia a recomendação
-});
-
-// Inicializa o modelo
+// Inicializa o modelo ao carregar a página
 inicializarModelo();
+
     </script>
 </body>
 </html>

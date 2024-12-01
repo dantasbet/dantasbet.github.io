@@ -1,0 +1,44 @@
+* {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+body {
+    background-color: #1B1F27;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    text-align: center;
+}
+
+header {
+    border-bottom: 2px solid yellow;
+}
+
+.titulo_header {
+    text-align: center;
+    margin: 10px;
+}
+
+a {
+    text-decoration: none;
+    color: white;
+}
+
+.tabela_bj {
+    height: 450px;
+    margin: 15px 0 15px 0;
+}
+
+.espaco_casino {
+    width: 90%;
+    height: 750px;
+    margin: auto;
+    background-color: #1B1F27;
+}
+
+.tela_casino {
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+}
