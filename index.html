@@ -16,7 +16,6 @@
     <header class="glass-header">
         <div class="header-content">
             <h1><i class="fas fa-robot"></i> Roleta Bot Monitor <span class="divider"></h1>
-            <!-- Header meta removed as requested -->
         </div>
     </header>
 
@@ -34,6 +33,34 @@
                     </div>
                 </div>
             </section>
+
+            <!-- MODIFICAÇÃO: Seção do Cassino (Iframe) movida para cá -->
+            <div class="casino-section glass-card">
+                <div class="section-header">
+                    <h2><i class="fas fa-play-circle"></i> Cassino Ao Vivo</h2>
+                    <div class="provider-badge">
+                        <span>1pra1.bet</span>
+                        <i class="fas fa-external-link-alt"></i>
+                    </div>
+                </div>
+                <div class="iframe-wrapper">
+                    <iframe
+                        id="casino-iframe"
+                        src="https://1pra1.bet.br/live-casino/game/2975361?provider=Pragmatic&from=%2Flive-casino"
+                        frameborder="0"
+                        allowfullscreen
+                        scrolling="auto"
+                        title="Cassino 1pra1.bet">
+                    </iframe>
+                </div>
+                <div class="iframe-footer">
+                    <button class="btn-refresh" id="refresh-iframe"><i class="fas fa-sync-alt"></i> Atualizar</button>
+                    <a href="https://www.1pra1.bet/" target="_blank" class="btn-external">
+                        <i class="fas fa-external-link-alt"></i> Acessar diretamente
+                    </a>
+                </div>
+            </div>
+            <!-- Fim da Seção do Cassino (Iframe) -->
 
             <section id="estatisticas">
                 <h2><i class="fas fa-chart-line"></i> Estatísticas</h2>
@@ -69,38 +96,16 @@
                 </div>
             </section>
         </div>
+        <!-- Fim da Seção do Bot -->
 
-        <!-- Seção do Cassino (Iframe) -->
-        <div class="casino-section glass-card">
-            <div class="section-header">
-                <h2><i class="fas fa-play-circle"></i> Cassino Ao Vivo</h2>
-                <div class="provider-badge">
-                    <span>1pra1.bet</span>
-                    <i class="fas fa-external-link-alt"></i>
-                </div>
-            </div>
-            <div class="iframe-wrapper">
-                <iframe
-                    id="casino-iframe"
-                    src="https://1pra1.bet.br/live-casino/game/2975361?provider=Pragmatic&from=%2Flive-casino"
-                    frameborder="0"
-                    allowfullscreen
-                    scrolling="auto"
-                    title="Cassino 1pra1.bet">
-                </iframe>
-            </div>
-            <div class="iframe-footer">
-                <button class="btn-refresh" id="refresh-iframe"><i class="fas fa-sync-alt"></i> Atualizar</button>
-                <a href="https://www.1pra1.bet/" target="_blank" class="btn-external">
-                    <i class="fas fa-external-link-alt"></i> Acessar diretamente
-                </a>
-            </div>
-        </div>
+        <!-- A Seção do Cassino foi movida para dentro da "bot-section" -->
+        <!-- Portanto, o .casino-section original aqui embaixo pode ser removido se você não tiver outros planos para ele -->
+        <!-- <div class="casino-section glass-card"> ... </div> -->
+
     </main>
 
     <footer class="glass-footer">
         <p><i class="fas fa-info-circle"></i> Jogue com responsabilidade. Apenas para maiores de 18 anos.</p>
-        <!-- Footer links removed as requested -->
     </footer>
 
     <script src="padroes.js"></script>
