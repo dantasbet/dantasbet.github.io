@@ -5,6 +5,7 @@ const P = "preto";
 
 let PADROES = [
     // Padrões específicos (copiados diretamente do seu .py, assumindo ordem correta para API)
+
     { "sequencia": [P, V, V, V, V, P, P, P, V, V, P], "sinal": V },
     { "sequencia": [V, P, P, P, P, V, V, V, P, P, V], "sinal": P },
     { "sequencia": [P, V, V, V, P, P, V], "sinal": P },
