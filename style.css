@@ -347,7 +347,7 @@ header h1 .casino-name {
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     :root {
-        --iframe-wrapper-height: 480px; 
+        --iframe-wrapper-height: 700px; 
     }
     /* .main-content margin-top não é mais necessário como antes */
     .stats-grid {
@@ -357,7 +357,7 @@ header h1 .casino-name {
 
 @media (max-width: 480px) {
     :root {
-        --iframe-wrapper-height: 450px; 
+        --iframe-wrapper-height: 700px; 
         --space-md: 1rem;
     }
     header h1 { font-size: var(--font-size-md); }
