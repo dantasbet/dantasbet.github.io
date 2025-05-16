@@ -2,8 +2,7 @@
 
 // --- Configuration ---
 const TARGET_API_URL = 'https://onixapis.com:2053/public/api/pragmatic/237';
-// SUBSTITUA PELA URL COMPLETA DO SEU CLOUDFLARE WORKER:
-const PROXY_WORKER_URL = 'https://proxy-worker-roleta.dantasbet.workers.dev/';
+const PROXY_WORKER_URL = 'https://proxy-worker-roleta.dantasbet.workers.dev/'; // CONFIRME ESTA URL
 const API_URL = `${PROXY_WORKER_URL}?url=${encodeURIComponent(TARGET_API_URL)}`;
 
 const API_TIMEOUT = 15000; // 15 segundos
@@ -19,10 +18,10 @@ let ultimoSinal = {
     gatilhoPadrao: null,
     timestampGerado: null,
     coresOrigemSinal: null,
-    ehMartingale: false
+    ehMartingale: false // Flag para indicar se ESTE sinal específico é um Martingale
 };
-let ultimosGatilhosProcessados = {}; // Para cooldown de gatilhos específicos
-let ultimoSinalResolvidoInfo = {    // Para evitar repetição imediata do mesmo sinal resolvido
+let ultimosGatilhosProcessados = {};
+let ultimoSinalResolvidoInfo = {
     gatilhoPadrao: null,
     coresQueFormaramGatilho: null,
     timestampResolvido: 0
@@ -32,7 +31,7 @@ let losses = parseInt(localStorage.getItem('roletaLosses')) || 0;
 let greenWins = parseInt(localStorage.getItem('roletaGreenWins')) || 0;
 let martingaleWins = parseInt(localStorage.getItem('roletaMartingaleWins')) || 0;
 let lastStatsLogTime = Date.now();
-let emMartingale = false; // Estado global para Martingale
+let aguardandoOportunidadeMartingale = false; // Novo estado para indicar que estamos esperando uma chance de Martingale
 
 // --- DOM Elements Cache ---
 const statusDiv = document.getElementById('status');
@@ -47,6 +46,7 @@ const refreshIframeButton = document.getElementById('refresh-iframe');
 // --- Funções ---
 
 function updateStatus(message, isError = false, isSuccess = false) {
+    // ... (sem alterações aqui)
     if (statusDiv) {
         let iconClass = 'fa-info-circle';
         let color = 'dodgerblue';
@@ -73,6 +73,7 @@ function updateStatus(message, isError = false, isSuccess = false) {
 }
 
 async function obterCoresAPI() {
+    // ... (sem alterações aqui, usando AbortController)
     console.log("Buscando dados da API via Worker...");
     try {
         const controller = new AbortController();
@@ -80,11 +81,11 @@ async function obterCoresAPI() {
 
         const response = await fetch(API_URL, {
             method: 'GET',
-            cache: 'no-store', // Evita cache do navegador para dados da API
+            cache: 'no-store',
             signal: controller.signal
         });
 
-        clearTimeout(timeoutId); // Limpa o timeout se a requisição completar a tempo
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             let errorBody = "Não foi possível ler o corpo do erro.";
@@ -94,7 +95,7 @@ async function obterCoresAPI() {
             return null;
         }
 
-        const dados = await response.json(); // Resposta direta do Worker
+        const dados = await response.json();
 
         if (dados && dados["Roleta Brasileira"] && Array.isArray(dados["Roleta Brasileira"])) {
             const numerosStr = dados["Roleta Brasileira"];
@@ -105,17 +106,13 @@ async function obterCoresAPI() {
                     updateStatus("Nenhuma cor válida da API (via Worker).", true);
                     return null;
                 }
-                // Se chegou aqui e não houve erro antes, pode atualizar status de sucesso
-                // if (statusDiv && !statusDiv.title.startsWith("Erro:")) {
-                //     updateStatus("API OK (via Worker). Monitorando...", false, true);
-                // }
                 return coresValidas;
             }
         }
         updateStatus("Formato de dados da API inesperado ou vazio (via Worker).", true);
         return null;
     } catch (error) {
-        if (error.name === 'AbortError') { // Erro de timeout do AbortController
+        if (error.name === 'AbortError') {
              updateStatus("Timeout ao buscar dados da API (via Worker).", true);
         } else {
             updateStatus(`ERRO DE FETCH (via Worker): ${error.message}`, true);
@@ -126,6 +123,7 @@ async function obterCoresAPI() {
 }
 
 function verificarPadrao(coresRecentes) {
+    // ... (sem alterações aqui)
     if (!coresRecentes || coresRecentes.length === 0) return [null, null, null];
     for (const padraoInfo of PADROES) { // PADROES deve estar definido em padroes.js
         const sequenciaPadrao = padraoInfo.sequencia;
@@ -146,6 +144,7 @@ function verificarPadrao(coresRecentes) {
     return [null, null, null];
 }
 
+// MODIFICADO: gerenciarSinais
 function gerenciarSinais(coresAtuaisAPI) {
     const [sinalDetectado, gatilhoDetectado, coresQueFormaramGatilhoAgora] = verificarPadrao(coresAtuaisAPI);
 
@@ -153,13 +152,11 @@ function gerenciarSinais(coresAtuaisAPI) {
         const agora = Date.now();
         const gatilhoStr = JSON.stringify(gatilhoDetectado);
 
-        // Cooldown para o mesmo padrão gatilho
         if (ultimosGatilhosProcessados[gatilhoStr] && (agora - ultimosGatilhosProcessados[gatilhoStr] < SIGNAL_COOLDOWN)) {
             console.log(`Cooldown para gatilho ${gatilhoStr} ativo. Sinal ignorado.`);
             return false;
         }
         
-        // Cooldown para evitar repetição imediata do mesmo sinal resolvido (mesmo gatilho e mesmas cores de origem)
         const foiResolvidoRecentementeComMesmoGatilhoECores =
             (agora - ultimoSinalResolvidoInfo.timestampResolvido < SIGNAL_COOLDOWN) &&
             JSON.stringify(ultimoSinalResolvidoInfo.gatilhoPadrao) === gatilhoStr &&
@@ -170,14 +167,17 @@ function gerenciarSinais(coresAtuaisAPI) {
             return false;
         }
 
+        // Define se o sinal atual é um Martingale
+        const esteSinalEhMartingale = aguardandoOportunidadeMartingale;
+
         ultimoSinal = {
             sinalEsperado: sinalDetectado,
             gatilhoPadrao: gatilhoDetectado,
             timestampGerado: agora,
-            coresOrigemSinal: [...coresQueFormaramGatilhoAgora], // Armazena as cores exatas que formaram o gatilho
-            ehMartingale: emMartingale // Se emMartingale global for true, este sinal será um martingale
+            coresOrigemSinal: [...coresQueFormaramGatilhoAgora],
+            ehMartingale: esteSinalEhMartingale // Marca este sinal como Martingale se aplicável
         };
-        ultimosGatilhosProcessados[gatilhoStr] = agora; // Atualiza timestamp do último processamento deste gatilho
+        ultimosGatilhosProcessados[gatilhoStr] = agora;
 
         const sinalUpper = ultimoSinal.sinalEsperado.toUpperCase();
         let msgDisplay = `🏹 SINAL IDENTIFICADO\n➡️ Entrar no ${sinalUpper}`;
@@ -196,45 +196,53 @@ function gerenciarSinais(coresAtuaisAPI) {
         }
         updateStatus(`Sinal: ${sinalUpper}${ultimoSinal.ehMartingale ? ' (Martingale 1)' : ''}`, false, false);
         
-        emMartingale = false; // Reseta o estado de martingale global após gerar o sinal (seja ele normal ou martingale)
+        // Se este sinal foi um Martingale, resetamos o estado de aguardar Martingale
+        if (esteSinalEhMartingale) {
+            aguardandoOportunidadeMartingale = false;
+        }
         return true;
     }
     return false;
 }
 
+// MODIFICADO: verificarResultadoSinal
 function verificarResultadoSinal(novaCorRegistrada) {
     if (!ultimoSinal.sinalEsperado) return;
 
     const sinalQueEstavaAtivo = ultimoSinal.sinalEsperado;
-    const eraMartingale = ultimoSinal.ehMartingale;
-    const gatilhoOriginal = ultimoSinal.gatilhoPadrao; // Gatilho que gerou o sinal (normal ou martingale)
-    const coresOrigemDoSinalAtivo = ultimoSinal.coresOrigemSinal; // Cores que formaram o gatilho
+    const eraMartingaleEsteSinal = ultimoSinal.ehMartingale; // Verifica se o SINAL ATIVO era um Martingale
+    const gatilhoOriginal = ultimoSinal.gatilhoPadrao;
+    const coresOrigemDoSinalAtivo = ultimoSinal.coresOrigemSinal;
     let msgResultado = "";
     let resultadoCorTexto = "var(--accent-color)";
 
+    let vitoria = false;
+
     if (novaCorRegistrada === 'verde') {
-        msgResultado = eraMartingale ? "🎯 MARTINGALE GANHO (VERDE)! 🎰" : "🎯 VITÓRIA NO VERDE! 🎰";
+        msgResultado = eraMartingaleEsteSinal ? "🎯 MARTINGALE GANHO (VERDE)! 🎰" : "🎯 VITÓRIA NO VERDE! 🎰";
         wins++;
         greenWins++;
-        if (eraMartingale) martingaleWins++;
-        emMartingale = false; 
+        if (eraMartingaleEsteSinal) martingaleWins++;
+        aguardandoOportunidadeMartingale = false; // Ganhou, reseta Martingale
+        vitoria = true;
         resultadoCorTexto = "var(--green-color)";
     } else if (novaCorRegistrada === sinalQueEstavaAtivo) {
-        msgResultado = eraMartingale ? "🎯 MARTINGALE GANHO! ✅" : "🎯 ACERTO! ✅";
+        msgResultado = eraMartingaleEsteSinal ? "🎯 MARTINGALE GANHO! ✅" : "🎯 ACERTO! ✅";
         wins++;
-        if (eraMartingale) martingaleWins++;
-        emMartingale = false; 
+        if (eraMartingaleEsteSinal) martingaleWins++;
+        aguardandoOportunidadeMartingale = false; // Ganhou, reseta Martingale
+        vitoria = true;
         resultadoCorTexto = "var(--success-color)";
     } else { 
         // Perda
-        if (eraMartingale) { // Se perdeu no Martingale
+        losses++; // Perda sempre é contabilizada
+        if (eraMartingaleEsteSinal) { // Perdeu no Martingale
             msgResultado = "❌ ERRO NO MARTINGALE! 👎";
-            losses++; 
-            emMartingale = false; // Fim do ciclo de Martingale
-        } else { // Se perdeu no sinal normal, ativa o Martingale para a próxima oportunidade
+            aguardandoOportunidadeMartingale = false; // Perdeu o Martingale, fim do ciclo
+        } else { // Perdeu no sinal normal
             msgResultado = "❌ ERRO! 👎";
-            losses++; // Contabiliza a perda do sinal normal
-            emMartingale = true; // Ativa o estado para o próximo sinal ser um Martingale
+            aguardandoOportunidadeMartingale = true; // Ativa para a PRÓXIMA oportunidade ser um Martingale
+            console.log("Derrota no sinal normal. Aguardando oportunidade para Martingale 1...");
         }
         resultadoCorTexto = "var(--danger-color)";
     }
@@ -246,7 +254,6 @@ function verificarResultadoSinal(novaCorRegistrada) {
     }
     updateStatus(statusMsg, false, false);
 
-    // Limpa a mensagem de resultado após um tempo se nenhum novo sinal foi gerado
     setTimeout(() => {
         if (!ultimoSinal.sinalEsperado && sinalTextoP && sinalTextoP.innerHTML.includes(msgResultado.split('\n')[0])) {
             sinalTextoP.innerHTML = `
@@ -258,30 +265,21 @@ function verificarResultadoSinal(novaCorRegistrada) {
         }
     }, 7000);
 
-    // Registra informações do sinal que acabou de ser resolvido para o cooldown de repetição
     ultimoSinalResolvidoInfo = {
         gatilhoPadrao: gatilhoOriginal,
         coresQueFormaramGatilho: coresOrigemDoSinalAtivo ? [...coresOrigemDoSinalAtivo] : null,
         timestampResolvido: Date.now()
     };
     
-    // Limpa o ultimoSinal se não estivermos entrando em martingale, ou se o martingale já foi resolvido.
-    if (!emMartingale || eraMartingale) { // Se não estamos esperando martingale OU se este era um martingale
-        ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
-    } else {
-        // Se emMartingale é true E não eraMartingale (ou seja, acabamos de perder um sinal normal e ativamos o martingale)
-        // Não limpa ultimoSinal completamente ainda, pois a lógica de martingale pode precisar dele,
-        // mas a flag ehMartingale já está em ultimoSinal e será usada por gerenciarSinais.
-        // A lógica de gerenciarSinais vai definir ultimoSinal.ehMartingale = true quando gerar o sinal de martingale.
-        // No entanto, é mais seguro resetar parcialmente e deixar gerenciarSinais construir o novo.
-        ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
-        console.log("Esperando oportunidade para Martingale 1...");
-    }
+    // Limpa o sinal atual após ser resolvido, independentemente de martingale ou não.
+    // A lógica de `aguardandoOportunidadeMartingale` controlará se o próximo será um martingale.
+    ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
 
     atualizarEstatisticasDisplay();
 }
 
 function atualizarEstatisticasDisplay() {
+    // ... (sem alterações aqui)
     if (winsSpan) winsSpan.textContent = wins;
     if (greenWinsSpan) greenWinsSpan.textContent = greenWins;
     if (lossesSpan) lossesSpan.textContent = losses; 
@@ -299,48 +297,41 @@ function atualizarEstatisticasDisplay() {
 }
 
 function exibirCoresApi(cores) {
-    // Função para exibir as cores no HTML, se necessário (não implementado visualmente)
-    // console.log("Cores da API para display:", cores);
+    // ... (sem alterações aqui)
 }
 
+// MODIFICADO: mainLoop
 async function mainLoop() {
     const coresAtuaisAPI = await obterCoresAPI();
 
     if (coresAtuaisAPI) {
-        exibirCoresApi(coresAtuaisAPI); // Pode ser usado para mostrar as bolinhas coloridas
+        exibirCoresApi(coresAtuaisAPI);
         if (statusDiv && !statusDiv.title.startsWith("Erro:")) {
             updateStatus("API OK (via Worker). Monitorando...", false, true);
         }
 
         const dadosDaApiMudaram = (JSON.stringify(coresAtuaisAPI) !== JSON.stringify(ultimosRegistradosAPI));
 
-        if (ultimoSinal.sinalEsperado) { 
-            if (dadosDaApiMudaram) {
-                verificarResultadoSinal(coresAtuaisAPI[0]); // Verifica resultado com a cor MAIS RECENTE
-            }
+        // Se existe um sinal ativo e os dados da API mudaram, verifica o resultado.
+        if (ultimoSinal.sinalEsperado && dadosDaApiMudaram) {
+            verificarResultadoSinal(coresAtuaisAPI[0]);
         }
         
-        // Condições para gerar um novo sinal:
-        // 1. Não há sinal ativo E (os dados da API mudaram OU é a primeira vez)
-        // OU
-        // 2. Estamos em estado de Martingale (emMartingale global = true) E o último sinal não foi marcado como martingale
-        //    (isso garante que gerenciarSinais seja chamado para tentar gerar um sinal de martingale)
-        if ((!ultimoSinal.sinalEsperado && (dadosDaApiMudaram || ultimosRegistradosAPI.length === 0)) ||
-            (emMartingale && !ultimoSinal.ehMartingale) ) { // A flag ehMartingale em ultimoSinal só é true quando o SINAL DE MARTINGALE é gerado
+        // Tenta gerar um novo sinal APENAS se não houver um sinal ativo.
+        // A lógica de ser um Martingale ou não é tratada dentro de `gerenciarSinais`
+        // baseado na flag `aguardandoOportunidadeMartingale`.
+        if (!ultimoSinal.sinalEsperado && (dadosDaApiMudaram || ultimosRegistradosAPI.length === 0)) {
             gerenciarSinais(coresAtuaisAPI);
         }
 
         if (dadosDaApiMudaram || ultimosRegistradosAPI.length === 0) {
             ultimosRegistradosAPI = [...coresAtuaisAPI];
         }
-    } else {
-        // Se obterCoresAPI retornou null, o updateStatus de erro já foi chamado dentro dela.
-        // Podemos manter o status de erro anterior ou definir um novo se necessário.
     }
 
-    // Log de estatísticas periódicas
     const agora = Date.now();
     if (agora - lastStatsLogTime >= STATS_INTERVAL) {
+        // ... (log de estatísticas sem alterações)
         console.info(`--- Estatísticas Cumulativas (${new Date().toLocaleTimeString()}) ---`);
         console.info(`Acertos: ${wins}, Verdes: ${greenWins}, Martingale Wins: ${martingaleWins}, Erros: ${losses}`);
         const totalConsiderandoMartingale = wins + losses; 
@@ -352,6 +343,7 @@ async function mainLoop() {
 }
 
 function zerarEstatisticas() {
+    // ... (sem alterações aqui)
     if (confirm("Tem certeza que deseja ZERAR TODAS as estatísticas? Esta ação não pode ser desfeita.")) {
         wins = 0;
         losses = 0;
@@ -371,7 +363,7 @@ function zerarEstatisticas() {
 
 // --- Inicialização ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Configuração inicial do texto do sinal
+    // ... (sem alterações aqui)
     if (sinalTextoP && !sinalTextoP.textContent.includes("SINAL IDENTIFICADO") && !sinalTextoP.textContent.includes("MARTINGALE")) {
         sinalTextoP.innerHTML = `
             <div class="signal-placeholder">
@@ -381,7 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sinalTextoP.style.color = "var(--gray-color)";
     }
 
-    // Configuração inicial do status
     if (statusDiv) {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i>';
         statusDiv.title = "Bot Web da Roleta Iniciado.";
@@ -393,19 +384,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     atualizarEstatisticasDisplay();
     lastStatsLogTime = Date.now(); 
-    mainLoop(); // Chama uma vez para buscar dados imediatamente
+    mainLoop(); 
     setInterval(mainLoop, CHECK_INTERVAL); 
 
-    // Listener para o botão de refresh do iframe
     if (refreshIframeButton) {
         refreshIframeButton.addEventListener('click', () => {
-            // Pergunta se quer zerar estatísticas antes de atualizar
-            // Para simplificar, vamos apenas zerar se confirmado E depois atualizar
-            zerarEstatisticas(); // Pergunta e zera se confirmado
-
+            zerarEstatisticas(); 
             if (casinoIframe) {
                 console.log("Atualizando iframe do cassino...");
-                casinoIframe.src = casinoIframe.src; // Recarrega o iframe
+                casinoIframe.src = casinoIframe.src; 
                 updateStatus("Iframe do cassino atualizado.", false, false);
             }
         });
