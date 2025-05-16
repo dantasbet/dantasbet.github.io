@@ -5,7 +5,7 @@
 const TARGET_API_URL = 'https://onixapis.com:2053/public/api/pragmatic/237';
 const API_URL = `https://api.allorigins.win/get?url=${encodeURIComponent(TARGET_API_URL)}`;
 const API_TIMEOUT = 15000;
-const CHECK_INTERVAL = 5000;
+const CHECK_INTERVAL = 3000;
 const MAX_CORES_API = 20;
 const SIGNAL_COOLDOWN = 5000;
 const STATS_INTERVAL = 60 * 10 * 1000;
