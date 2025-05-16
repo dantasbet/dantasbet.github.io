@@ -4,9 +4,7 @@ const P = "preto";
 // const G = "verde"; // Verde não é usado nas sequências de gatilho
 
 let PADROES = [
-    // Sua lista de padrões revisada, traduzida diretamente:
-    // Formato: { "sequencia": [MAIS_RECENTE_DA_API, ..., MAIS_ANTIGO_DA_SEQUENCIA_NA_API], "sinal": SINAL_ESPERADO }
-
+    // Sua lista de padrões existente...
     { "sequencia": [P, V, P, V], "sinal": V },
     { "sequencia": [V, P, V, P], "sinal": P },
     { "sequencia": [P, V, P, V, P, V], "sinal": P },
@@ -22,6 +20,11 @@ let PADROES = [
     { "sequencia": [V, V, P, P, P, V, V, V, V, P], "sinal": P },
     { "sequencia": [P, P, V, V, V, P, P, P, P, V], "sinal": V },
 
+    // NOVOS PADRÕES ADICIONADOS AQUI:
+    { "sequencia": [V, P, V, V, P, V, V, V], "sinal": P },
+    { "sequencia": [P, V, P, P, V, P, P, P], "sinal": V },
+
+    // Continuação da sua lista...
     { "sequencia": [P, P, P, V, V, V, P], "sinal": V },
     { "sequencia": [P, P, P, P, V, V, V, V, P], "sinal": V },
     { "sequencia": [P, P, P, P, P, V, V, V, V, V, P], "sinal": V },
