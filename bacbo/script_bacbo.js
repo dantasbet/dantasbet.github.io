@@ -204,9 +204,7 @@ function definirSinalAtivoBacBo(resultadoSinal, gatilhoId, resultadosGatilho, eh
 
 // CORRIGIDO E REFINADO: verificarResultadoSinalBacBo
 function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
-    if (!ultimoSinalBacBo.sinalEsperado) {
-        return; // NENHUM SINAL ATIVO PARA VERIFICAR.
-    }
+    if (!ultimoSinalBacBo.sinalEsperado) return;
 
     const sinalResolvido = { ...ultimoSinalBacBo };
     let msgResultado = "", resultadoCorTexto = "var(--accent-color)";
@@ -222,60 +220,71 @@ function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
         resultadoCorTexto = "var(--warning-color)";
         if (sinalResolvido.ehMartingale) {
             msgResultado = "⚠️ EMPATE NO MARTINGALE! (Ciclo perdido)";
-            derrotaParaContabilizar = true; // TIE no Martingale é tratado como perda do ciclo
-            console.log("[RESULTADO] Empate no Martingale. Ciclo encerrado com perda.");
+            derrotaParaContabilizar = true;
         } else {
-            // TIE no sinal normal: Prepara para Martingale na mesma aposta.
             prepararParaMartingale = true;
-            sinalOriginalParaMartingaleBacBo = { ...sinalResolvido };
-            console.log(`[RESULTADO] Empate no sinal (${sinalResolvido.sinalEsperado}). Preparando Martingale.`);
         }
     } else if (novoResultadoRegistrado === sinalResolvido.sinalEsperado) {
         vitoriaParaContabilizar = true;
-        msgResultado = sinalResolvido.ehMartingale ? "🎯 MARTINGALE GANHO! ✅" : "🎯 ACERTO! ✅";
-        if (sinalResolvido.ehMartingale) martingaleWinsBacBo++;
+        msgResultado = sinalResolvido.ehMartingale ? "✅ MARTINGALE VENCIDO!" : "✅ SINAL VENCIDO!";
         resultadoCorTexto = "var(--success-color)";
-        console.log(`[RESULTADO] Acerto! ${sinalResolvido.ehMartingale ? 'no Martingale.' : 'no sinal normal.'}`);
-    } else { // Perdeu (Player vs Banker, não foi Tie)
+    } else {
         if (sinalResolvido.ehMartingale) {
-            msgResultado = "❌ ERRO NO MARTINGALE! 👎";
             derrotaParaContabilizar = true;
-            resultadoCorTexto = "var(--danger-color)";
-            console.log("[RESULTADO] Erro no Martingale. Ciclo encerrado com perda.");
+            msgResultado = "❌ MARTINGALE PERDIDO!";
+            resultadoCorTexto = "crimson";
         } else {
-            // Sinal normal falhou: Prepara para Martingale
             prepararParaMartingale = true;
-            sinalOriginalParaMartingaleBacBo = { ...sinalResolvido };
-            console.log(`[RESULTADO] Falha no sinal (${sinalResolvido.sinalEsperado}). Preparando Martingale.`);
+            msgResultado = "❌ SINAL FALHOU! (Pronto p/ MG1)";
+            resultadoCorTexto = "orange";
         }
     }
 
-    // Limpa o sinal ativo atual APÓS processar seu resultado
-    ultimoSinalBacBo = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
-
-    if (prepararParaMartingale) {
-        // Se vai para Martingale, exibe a mensagem de Empate (se foi) ou nenhuma msg de erro ainda.
-        // E retorna para o mainLoop tentar definir o Martingale.
-        if (novoResultadoRegistrado === TIE_RESULT && sinalTextoPBacBo) {
-            sinalTextoPBacBo.innerHTML = msgResultado.replace(/\n/g, '<br>');
-            sinalTextoPBacBo.style.color = resultadoCorTexto;
-        }
-        atualizarEstatisticasBacBo(); // Para registrar o TIE
-        return;
-    }
-
-    // Se o ciclo encerrou (não vai para Martingale):
     if (vitoriaParaContabilizar) {
         winsBacBo++;
-    } else if (derrotaParaContabilizar) {
-        lossesBacBo++;
+        if (sinalResolvido.ehMartingale) martingaleWinsBacBo++;
     }
 
+    if (derrotaParaContabilizar) lossesBacBo++;
+
+    if (prepararParaMartingale) {
+        sinalOriginalParaMartingaleBacBo = sinalResolvido;
+    } else {
+        sinalOriginalParaMartingaleBacBo = null;
+    }
+
+    // Reset sinal ativo
+    ultimoSinalBacBo = {
+        sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null,
+        coresOrigemSinal: null, ehMartingale: false
+    };
+
+    ultimoSinalResolvidoInfoBacBo = {
+        gatilhoPadrao: sinalResolvido.gatilhoPadrao,
+        coresQueFormaramGatilho: sinalResolvido.coresOrigemSinal,
+        timestampResolvido: Date.now()
+    };
+
+    // Atualizar UI e storage
     if (sinalTextoPBacBo) {
-        sinalTextoPBacBo.innerHTML = msgResultado.replace(/\n/g, '<br>');
+        sinalTextoPBacBo.innerHTML = `<span class="signal-placeholder">${msgResultado}</span>`;
         sinalTextoPBacBo.style.color = resultadoCorTexto;
     }
-    updateStatusBacBo(`Resultado (${sinalResolvido.sinalEsperado.toUpperCase()}): ${msgResultado.split('\n')[0]}`, false, vitoriaParaContabilizar);
+
+    localStorage.setItem('bacboWins', winsBacBo.toString());
+    localStorage.setItem('bacboLosses', lossesBacBo.toString());
+    localStorage.setItem('bacboTieResults', tieResultsBacBo.toString());
+    localStorage.setItem('bacboMartingaleWins', martingaleWinsBacBo.toString());
+
+    const totalJogos = winsBacBo + lossesBacBo;
+    const winRate = totalJogos > 0 ? ((winsBacBo / totalJogos) * 100).toFixed(1) : "0.0";
+    if (winsSpanBacBo) winsSpanBacBo.textContent = winsBacBo.toString();
+    if (lossesSpanBacBo) lossesSpanBacBo.textContent = lossesBacBo.toString();
+    if (tieResultsSpanBacBo) tieResultsSpanBacBo.textContent = tieResultsBacBo.toString();
+    if (winRateSpanBacBo) winRateSpanBacBo.textContent = `${winRate}%`;
+
+    updateStatusBacBo(`Resultado processado: ${msgResultado}`, false, true);
+}
 
     setTimeout(() => {
         if (sinalTextoPBacBo && sinalTextoPBacBo.innerHTML.includes(msgResultado.split('\n')[0]) && !ultimoSinalBacBo.sinalEsperado) {
