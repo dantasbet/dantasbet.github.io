@@ -17,7 +17,7 @@ const SEQUENCE_LENGTH = 5;
 const NUM_FEATURES_PER_COLOR = 2;
 const NUM_CLASSES = 2;
 let isTraining = false;
-const ML_CONFIDENCE_THRESHOLD = 0.70;
+const ML_CONFIDENCE_THRESHOLD = 0.65;
 
 const COLOR_TO_INDEX_ML = { 'vermelho': 0, 'preto': 1 };
 const INDEX_TO_COLOR_ML = { 0: 'vermelho', 1: 'preto' };
