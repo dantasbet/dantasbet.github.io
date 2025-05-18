@@ -1,47 +1,38 @@
-// script.js (Frontend no GitHub Pages)
+// script.js (Frontend no GitHub Pages - Versão Original Restaurada)
 
 // --- Configuration ---
-const TARGET_API_URL = 'https://onixapis.com:2053/public/api/pragmatic/275'; // ATENÇÃO: A API MUDOU PARA 275 NO EXEMPLO ORIGINAL, MANTENDO AQUI
+const TARGET_API_URL = 'https://onixapis.com:2053/public/api/pragmatic/237';
 const PROXY_WORKER_URL = 'https://proxy-worker-roleta.dantasbet.workers.dev/'; // CONFIRME ESTA URL!
-const API_URL = `${PROXY_WORKER_URL}?url=${encodeURIComponent(TARGET_API_URL)}`;
+const API_URL = `${PROXY_WORKER_URL}?url=${encodeURIComponent(TARGET_API_URL)}`; // Corrigido template string
 
 const API_TIMEOUT = 15000;
-const CHECK_INTERVAL = 5000;
-const MAX_CORES_API = 50; // Aumentar para ter um histórico maior para análise dinâmica
+const CHECK_INTERVAL = 5000; // Verificamos a API a cada 5s
+const MAX_CORES_API = 20;
 const SIGNAL_COOLDOWN = 5000;
 const STATS_INTERVAL = 60 * 10 * 1000;
-
-// --- Configurações para Detecção Dinâmica de Padrões ---
-const MIN_DYNAMIC_PATTERN_LENGTH = 3; // Comprimento mínimo de uma sequência para ser considerada um padrão
-const MAX_DYNAMIC_PATTERN_LENGTH = 6; // Comprimento máximo de uma sequência
-const MIN_OCCURRENCES_FOR_RELIABLE_SIGNAL = 2; // Padrão deve ter ocorrido pelo menos X vezes com um resultado dominante
 
 // --- Global State ---
 let ultimosRegistradosAPI = [];
 let ultimoSinal = {
     sinalEsperado: null,
-    gatilhoPadrao: null, // Agora será o padrão dinâmico detectado
+    gatilhoPadrao: null,
     timestampGerado: null,
     coresOrigemSinal: null,
-    ehMartingale: false
+    ehMartingale: false // Indica se ESTE sinal ativo é uma tentativa de Martingale
 };
-let ultimosGatilhosProcessados = {}; // Usado para cooldown do padrão stringificado
+let sinalOriginalParaMartingale = null; // Guarda o sinal original que falhou e ativou o Martingale
+let ultimosGatilhosProcessados = {}; // { "gatilhoJSON": timestamp }
 let ultimoSinalResolvidoInfo = {
     gatilhoPadrao: null,
     coresQueFormaramGatilho: null,
     timestampResolvido: 0
 };
 
-let baseDeConhecimentoDinamica = {}; // Estrutura: { '["P","V","P"]': { outcomes: {V:2, P:1}, total: 3 } }
-
 let wins = parseInt(localStorage.getItem('roletaWins')) || 0;
 let losses = parseInt(localStorage.getItem('roletaLosses')) || 0;
 let greenWins = parseInt(localStorage.getItem('roletaGreenWins')) || 0;
 let martingaleWins = parseInt(localStorage.getItem('roletaMartingaleWins')) || 0;
 let lastStatsLogTime = Date.now();
-let aguardandoOportunidadeMartingale = false;
-let sinalOriginalParaMartingale = null;
-
 
 // --- DOM Elements Cache ---
 const statusDiv = document.getElementById('status');
@@ -59,171 +50,118 @@ function updateStatus(message, isError = false, isSuccess = false) {
     if (statusDiv) {
         let iconClass = 'fa-info-circle';
         let color = 'dodgerblue';
-        let titleMessage = `Info: ${message}`;
-        if (isError) { iconClass = 'fa-times-circle'; color = 'crimson'; titleMessage = `Erro: ${message}`; }
-        else if (isSuccess) { iconClass = 'fa-check-circle'; color = 'green'; titleMessage = `Status: ${message}`; }
+        let titleMessage = `Info: ${message}`; // Corrigido template string
+
+        if (isError) {
+            iconClass = 'fa-times-circle';
+            color = 'crimson';
+            titleMessage = `Erro: ${message}`;
+        } else if (isSuccess) {
+            iconClass = 'fa-check-circle';
+            color = 'green';
+            titleMessage = `Status: ${message}`;
+        }
         statusDiv.innerHTML = `<i class="fas ${iconClass}"></i>`;
         statusDiv.style.color = color;
         statusDiv.title = titleMessage;
     }
-    if (isError) console.error(message); else console.log(message);
+    if (isError) {
+        console.error(message);
+    } else {
+        // console.log(message); // Comentado para reduzir verbosidade, pode descomentar para debug
+    }
 }
 
 async function obterCoresAPI() {
-    console.log("Buscando dados da API via Worker...");
+    // console.log("Buscando dados da API via Worker (Onix)..."); // Modificado para clareza
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-        const response = await fetch(API_URL, { method: 'GET', cache: 'no-store', signal: controller.signal });
+
+        const response = await fetch(API_URL, {
+            method: 'GET',
+            cache: 'no-store',
+            signal: controller.signal
+        });
+
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-            let errorBody = "N/A"; try { errorBody = await response.text(); } catch (e) {}
-            updateStatus(`Erro HTTP ${response.status} via Worker: ${response.statusText}`, true);
-            console.error("Corpo erro Worker:", errorBody.substring(0, 500));
+            let errorBody = "Não foi possível ler o corpo do erro da resposta do Worker.";
+            try { errorBody = await response.text(); } catch (e) { /* ignora */ }
+            updateStatus(`Erro HTTP ${response.status} via Worker (Onix): ${response.statusText}`, true);
+            console.error("Corpo da resposta de erro do Worker (Onix):", errorBody.substring(0, 500));
             return null;
         }
+
         const dados = await response.json();
+
+        // Esta parte espera que `identificarCor` esteja definida (de cores_roleta.js)
+        // e `PADROES` esteja definido (de padroes.js)
         if (dados && dados["Roleta Brasileira"] && Array.isArray(dados["Roleta Brasileira"])) {
             const numerosStr = dados["Roleta Brasileira"];
             if (numerosStr.length > 0) {
-                const cores = numerosStr.slice(0, MAX_CORES_API).map(identificarCor);
+                const cores = numerosStr.slice(0, MAX_CORES_API).map(identificarCor); // `identificarCor` precisa estar disponível
                 const coresValidas = cores.filter(cor => cor !== 'inválido');
                 if (coresValidas.length === 0) {
-                    updateStatus("Nenhuma cor válida da API (Worker).", true); return null;
+                    updateStatus("Nenhuma cor válida retornada pela API (Onix).", true);
+                    return null;
                 }
                 return coresValidas;
             }
         }
-        updateStatus("Formato dados API inesperado (Worker).", true); return null;
+        updateStatus("Formato de dados da API (Onix) inesperado ou vazio.", true);
+        return null;
     } catch (error) {
-        if (error.name === 'AbortError') updateStatus("Timeout API (Worker).", true);
-        else updateStatus(`ERRO FETCH (Worker): ${error.message}`, true);
-        console.error("Detalhes erro fetch (Worker):", error); return null;
-    }
-}
-
-// NOVA FUNÇÃO: Atualiza a base de conhecimento com padrões observados
-function atualizarBaseDeConhecimentoDinamica(historicoCores) {
-    if (!historicoCores || historicoCores.length < MIN_DYNAMIC_PATTERN_LENGTH + 1) {
-        return; // Precisa de histórico suficiente para um padrão + um resultado
-    }
-
-    baseDeConhecimentoDinamica = {}; // Reinicia para recalcular com o histórico mais recente
-
-    // Itera sobre os comprimentos de padrão possíveis
-    for (let len = MIN_DYNAMIC_PATTERN_LENGTH; len <= MAX_DYNAMIC_PATTERN_LENGTH; len++) {
-        // Itera sobre o histórico para encontrar todas as subsequências de comprimento 'len'
-        // O loop vai até historicoCores.length - len para garantir que haja uma cor *após* a sequência
-        for (let i = 0; i <= historicoCores.length - len - 1; i++) {
-            // A sequência (padrão) é da mais antiga para a mais nova dentro da subsequência
-            // Mas a API nos dá [MAIS_RECENTE, ..., MAIS_ANTIGA]
-            // Então, para um padrão como [c1, c2, c3] (c1 mais recente),
-            // no histórico [..., c_antiga3, c_antiga2, c_antiga1, c1_resultado, c2, c3]
-            // o padrão é [c3, c2, c1_resultado] e o outcome é c_antiga1
-            // Precisamos inverter a ordem para consistência ou usar a ordem da API.
-            // Vamos usar a ordem da API: [MAIS_RECENTE, ..., MENOS_RECENTE_DO_PADRAO]
-            const padraoArray = historicoCores.slice(i + 1, i + 1 + len).reverse(); // Padrão do mais antigo para o mais novo
-            const resultadoDaSequencia = historicoCores[i]; // A cor que SEGUIU o padrão
-
-            // Para o nosso sistema, o padrão é verificado contra as cores MAIS RECENTES da API.
-            // Ex: API = [R, P, V, P, V] (R mais recente)
-            // Se len = 3, queremos ver padrões que levaram a R.
-            // Um padrão seria [P,V,P] (imediatamente antes de R).
-            // Outro seria [V,P,V] (imediatamente antes de P, que foi antes de R).
-
-            // Revisitando a lógica de extração de padrões:
-            // historicoCores = [corN, corN-1, corN-2, ..., cor1] (corN é a mais recente)
-            // Para um padrão de comprimento `len` que levou a `corX`:
-            // [corX, padrao1, padrao2, ..., padraoLen]
-            // Então `corX` é `historicoCores[i]`
-            // E o padrão é `historicoCores.slice(i+1, i+1+len)`
-            // Este padrão `[padrao1, ..., padraoLen]` é o que queremos usar como chave.
-
-            const sequenciaGatilho = historicoCores.slice(i + 1, i + 1 + len);
-            const corResultado = historicoCores[i]; // A cor que efetivamente saiu APÓS a sequenciaGatilho
-
-            if (sequenciaGatilho.length !== len) continue; // Sanity check
-
-            const padraoStr = JSON.stringify(sequenciaGatilho);
-
-            if (!baseDeConhecimentoDinamica[padraoStr]) {
-                baseDeConhecimentoDinamica[padraoStr] = {
-                    outcomes: { vermelho: 0, preto: 0, verde: 0 },
-                    totalOcorrencias: 0
-                };
-            }
-            baseDeConhecimentoDinamica[padraoStr].outcomes[corResultado]++;
-            baseDeConhecimentoDinamica[padraoStr].totalOcorrencias++;
+        if (error.name === 'AbortError') {
+             updateStatus("Timeout ao buscar dados da API (Onix) via Worker.", true);
+        } else {
+            updateStatus(`ERRO DE FETCH ao contatar o Worker (Onix): ${error.message}`, true);
         }
+        console.error("Detalhes completos do erro de fetch (Worker, Onix):", error);
+        return null;
     }
-    // console.log("Base de conhecimento atualizada:", baseDeConhecimentoDinamica);
 }
 
-// MODIFICADO: Verifica padrões com base na base de conhecimento dinâmica
-function verificarPadraoDinamico(coresRecentesAPI) {
-    if (!coresRecentesAPI || coresRecentesAPI.length < MIN_DYNAMIC_PATTERN_LENGTH) {
+function verificarPadrao(coresRecentes) {
+    if (!coresRecentes || coresRecentes.length === 0) return [null, null, null];
+
+    // Esta função requer que a variável `PADROES` esteja definida e acessível.
+    // Certifique-se de que padroes.js está incluído no seu HTML e `PADROES` está global.
+    if (typeof PADROES === 'undefined') {
+        console.error("A variável PADROES não está definida. Verifique se padroes.js está carregado.");
         return [null, null, null];
     }
 
-    let melhorPadraoEncontrado = null;
-    let sinalDoMelhorPadrao = null;
-    let confiancaMelhorPadrao = 0; // Para desempatar, podemos usar a confiança (ocorrências do sinal / total de ocorrências do padrão)
-
-    // Itera dos comprimentos de padrão mais longos para os mais curtos
-    for (let len = MAX_DYNAMIC_PATTERN_LENGTH; len >= MIN_DYNAMIC_PATTERN_LENGTH; len--) {
-        if (coresRecentesAPI.length < len) continue;
-
-        const sequenciaAtualObservada = coresRecentesAPI.slice(0, len); // As 'len' cores mais recentes
-        const padraoAtualStr = JSON.stringify(sequenciaAtualObservada);
-
-        if (baseDeConhecimentoDinamica[padraoAtualStr]) {
-            const infoPadrao = baseDeConhecimentoDinamica[padraoAtualStr];
-            if (infoPadrao.totalOcorrencias >= MIN_OCCURRENCES_FOR_RELIABLE_SIGNAL) { // Mínimo de vezes que o padrão deve ter sido visto
-                let corMaisFrequente = null;
-                let maxFrequencia = 0;
-
-                for (const corOutcome in infoPadrao.outcomes) {
-                    if (corOutcome === 'verde') continue; // Normalmente não apostamos no verde como sinal direto
-                    if (infoPadrao.outcomes[corOutcome] > maxFrequencia) {
-                        maxFrequencia = infoPadrao.outcomes[corOutcome];
-                        corMaisFrequente = corOutcome;
-                    } else if (infoPadrao.outcomes[corOutcome] === maxFrequencia) {
-                        corMaisFrequente = null; // Empate, sem sinal claro
-                    }
+    for (const padraoInfo of PADROES) {
+        const sequenciaPadrao = padraoInfo.sequencia;
+        if (coresRecentes.length >= sequenciaPadrao.length) {
+            let match = true;
+            for (let i = 0; i < sequenciaPadrao.length; i++) {
+                if (coresRecentes[i] !== sequenciaPadrao[i]) {
+                    match = false;
+                    break;
                 }
-
-                if (corMaisFrequente && maxFrequencia >= MIN_OCCURRENCES_FOR_RELIABLE_SIGNAL) { // O resultado dominante deve ter ocorrido um mínimo de vezes
-                    const confiancaAtual = maxFrequencia / infoPadrao.totalOcorrencias;
-                    // Aqui você poderia adicionar um MIN_SUCCESS_RATE_FOR_SIGNAL se quisesse
-                    // if (confiancaAtual < MIN_SUCCESS_RATE_FOR_SIGNAL) continue;
-
-                    // Prioriza o padrão mais longo ou com maior confiança (se comprimentos iguais)
-                    // Neste caso, como iteramos do mais longo para o mais curto, o primeiro encontrado é o mais longo.
-                    // Poderíamos adicionar uma lógica para desempatar por confiança se necessário.
-                    // Por enquanto, o primeiro padrão válido encontrado (que é o mais longo) será usado.
-                    console.info("PADRÃO DINÂMICO ENCONTRADO:", padraoAtualStr, "SINAL:", corMaisFrequente, "Confiança:", confiancaAtual.toFixed(2), "Baseado em", infoPadrao.totalOcorrencias, "ocorrências.");
-                    return [corMaisFrequente, sequenciaAtualObservada, sequenciaAtualObservada];
-                }
+            }
+            if (match) {
+                console.info("PADRÃO GATILHO ENCONTRADO:", JSON.stringify(sequenciaPadrao), "SINAL GERADO:", padraoInfo.sinal);
+                return [padraoInfo.sinal, sequenciaPadrao, coresRecentes.slice(0, sequenciaPadrao.length)];
             }
         }
     }
-    return [null, null, null]; // Nenhum padrão dinâmico confiável encontrado
+    return [null, null, null];
 }
 
-
-// MODIFICADO: gerenciarSinais agora usa verificarPadraoDinamico
 function gerenciarSinais(coresAtuaisAPI, forcarMartingale = false) {
-    // AGORA verificarPadrao é verificarPadraoDinamico
-    const [sinalDetectado, gatilhoDetectado, coresQueFormaramGatilhoAgora] = verificarPadraoDinamico(coresAtuaisAPI);
+    const [sinalDetectado, gatilhoDetectado, coresQueFormaramGatilhoAgora] = verificarPadrao(coresAtuaisAPI);
 
     if (sinalDetectado) {
         const agora = Date.now();
-        const gatilhoStr = JSON.stringify(gatilhoDetectado);
+        const gatilhoStr = JSON.stringify(gatilhoDetectado); // Padrões fixos são arrays, JSON.stringify é adequado
 
         if (!forcarMartingale) {
             if (ultimosGatilhosProcessados[gatilhoStr] && (agora - ultimosGatilhosProcessados[gatilhoStr] < SIGNAL_COOLDOWN)) {
-                console.log(`Cooldown para gatilho dinâmico ${gatilhoStr} ativo. Sinal ignorado.`);
+                console.log(`Cooldown para gatilho ${gatilhoStr} ativo. Sinal ignorado.`);
                 return false;
             }
             const foiResolvidoRecentementeComMesmoGatilhoECores =
@@ -232,14 +170,14 @@ function gerenciarSinais(coresAtuaisAPI, forcarMartingale = false) {
                 JSON.stringify(ultimoSinalResolvidoInfo.coresQueFormaramGatilho) === JSON.stringify(coresQueFormaramGatilhoAgora);
 
             if (foiResolvidoRecentementeComMesmoGatilhoECores) {
-                console.log("Gatilho dinâmico idêntico com mesmas cores de origem resolvido recentemente. Sinal ignorado.");
+                console.log("Gatilho idêntico com mesmas cores de origem resolvido recentemente. Sinal ignorado.");
                 return false;
             }
         }
 
         ultimoSinal = {
             sinalEsperado: sinalDetectado,
-            gatilhoPadrao: gatilhoDetectado,
+            gatilhoPadrao: gatilhoDetectado, // Array do padrão
             timestampGerado: agora,
             coresOrigemSinal: [...coresQueFormaramGatilhoAgora],
             ehMartingale: forcarMartingale
@@ -251,40 +189,46 @@ function gerenciarSinais(coresAtuaisAPI, forcarMartingale = false) {
         }
 
         const sinalUpper = ultimoSinal.sinalEsperado.toUpperCase();
-        let msgDisplay = ultimoSinal.ehMartingale ? `🔄 MARTINGALE 1\n➡️ Entrar no ${sinalUpper}` : `🏹 SINAL DINÂMICO\n➡️ Entrar no ${sinalUpper}`;
-        let textColor = ultimoSinal.ehMartingale ? "var(--secondary-color)" : "var(--accent-color)"; // Pode querer uma cor diferente para sinal dinâmico
+        let msgDisplay;
+        let textColor;
+
+        if (ultimoSinal.ehMartingale) {
+            msgDisplay = `🔄 MARTINGALE 1\n➡️ Entrar no ${sinalUpper}`;
+            textColor = "var(--secondary-color)";
+        } else {
+            msgDisplay = `🏹 SINAL IDENTIFICADO\n➡️ Entrar no ${sinalUpper}`;
+            textColor = "var(--accent-color)";
+        }
 
         if (sinalTextoP) {
-            sinalTextoP.innerHTML = msgDisplay.replace('\n', '<br>');
+            sinalTextoP.innerHTML = msgDisplay.replace(/\n/g, '<br>'); // Usar replace com regex global
             sinalTextoP.style.color = textColor;
             const placeholderDiv = sinalTextoP.querySelector('.signal-placeholder');
             if(placeholderDiv) placeholderDiv.remove();
         }
-        updateStatus(`Sinal: ${sinalUpper}${ultimoSinal.ehMartingale ? ' (Martingale 1)' : ''} (Dinâmico)`, false, false);
+        updateStatus(`Sinal: ${sinalUpper}${ultimoSinal.ehMartingale ? ' (Martingale 1)' : ''}`, false, false);
         return true;
     }
     return false;
 }
 
-// verificarResultadoSinal: A lógica interna permanece a mesma da sua última versão funcional.
-// As estatísticas e mensagens de vitória/derrota são baseadas no `ultimoSinal` gerado (seja ele fixo ou dinâmico).
 function verificarResultadoSinal(novaCorRegistrada) {
     if (!ultimoSinal.sinalEsperado && !sinalOriginalParaMartingale) {
         return;
     }
 
     if (sinalOriginalParaMartingale) {
-        // console.log("API atualizou. Tentando gerar Martingale baseado em padrão dinâmico...");
-        const martingaleGerado = gerenciarSinais(ultimosRegistradosAPI, true); // Usa as cores que já temos
+        // console.log("API atualizou após falha de sinal normal. Tentando gerar Martingale...");
+        const martingaleGerado = gerenciarSinais(ultimosRegistradosAPI, true);
         if (martingaleGerado) {
-            return; 
+            return;
         } else {
             if (sinalTextoP && !sinalTextoP.innerHTML.includes("MARTINGALE")) {
                  sinalTextoP.innerHTML = `⏳ Aguardando padrão<br>para Martingale 1...`;
                  sinalTextoP.style.color = "var(--warning-color)";
             }
-            // console.log("Nenhum padrão dinâmico para Martingale 1. Aguardando...");
-            return; 
+            // console.log("Nenhum padrão encontrado para o Martingale 1. Aguardando próxima rodada...");
+            return;
         }
     }
 
@@ -294,30 +238,43 @@ function verificarResultadoSinal(novaCorRegistrada) {
     let cicloEncerrado = true;
 
     if (novaCorRegistrada === 'verde') {
-        wins++; greenWins++;
-        msgResultado = sinalResolvido.ehMartingale ? (martingaleWins++, "🎯 MARTINGALE GANHO (VERDE)! 🎰") : "🎯 VITÓRIA NO VERDE! 🎰";
+        wins++;
+        greenWins++;
+        if (sinalResolvido.ehMartingale) {
+            msgResultado = "🎯 MARTINGALE GANHO (VERDE)! 🎰";
+            martingaleWins++;
+        } else {
+            msgResultado = "🎯 VITÓRIA NO VERDE! 🎰";
+        }
         resultadoCorTexto = "var(--green-color)";
     } else if (novaCorRegistrada === sinalResolvido.sinalEsperado) {
         wins++;
-        msgResultado = sinalResolvido.ehMartingale ? (martingaleWins++, "🎯 MARTINGALE GANHO! ✅") : "🎯 ACERTO! ✅";
+        if (sinalResolvido.ehMartingale) {
+            msgResultado = "🎯 MARTINGALE GANHO! ✅";
+            martingaleWins++;
+        } else {
+            msgResultado = "🎯 ACERTO! ✅";
+        }
         resultadoCorTexto = "var(--success-color)";
     } else {
         if (sinalResolvido.ehMartingale) {
-            msgResultado = "❌ ERRO NO MARTINGALE! 👎"; losses++;
+            msgResultado = "❌ ERRO NO MARTINGALE! 👎";
+            losses++;
             resultadoCorTexto = "var(--danger-color)";
         } else {
             sinalOriginalParaMartingale = { ...sinalResolvido };
             ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
             cicloEncerrado = false;
-            console.log(`Falha no sinal dinâmico (${sinalOriginalParaMartingale.sinalEsperado}). Tentando Martingale 1...`);
+            // console.log(`Falha no sinal normal (${sinalOriginalParaMartingale.sinalEsperado}). Tentando Martingale 1...`);
             const martingaleGeradoAgora = gerenciarSinais(ultimosRegistradosAPI, true);
-            if (martingaleGeradoAgora) return;
-            else {
+            if (martingaleGeradoAgora) {
+                return;
+            } else {
                 if (sinalTextoP) {
                     sinalTextoP.innerHTML = `⏳ Aguardando padrão<br>para Martingale 1...`;
                     sinalTextoP.style.color = "var(--warning-color)";
                 }
-                // console.log("Nenhum padrão dinâmico para Martingale 1 imediatamente. Aguardando...");
+                // console.log("Nenhum padrão para Martingale 1 encontrado imediatamente. Aguardando...");
                 return;
             }
         }
@@ -329,12 +286,17 @@ function verificarResultadoSinal(novaCorRegistrada) {
             sinalTextoP.innerHTML = msgResultado.replace(/\n/g, '<br>');
             sinalTextoP.style.color = resultadoCorTexto;
         }
-        updateStatus(statusMsg, false, false);
+        updateStatus(statusMsg, false, (msgResultado.includes("VITÓRIA") || msgResultado.includes("ACERTO") || msgResultado.includes("GANHO")));
+
 
         setTimeout(() => {
             const placeholderAtivo = sinalTextoP && sinalTextoP.querySelector('.signal-placeholder');
             if (sinalTextoP && sinalTextoP.innerHTML.includes(msgResultado.split('\n')[0]) && !ultimoSinal.sinalEsperado && !placeholderAtivo ) {
-                 sinalTextoP.innerHTML = `<div class="signal-placeholder"><i class="fas fa-spinner fa-pulse"></i><span>Aguardando sinal...</span></div>`;
+                 sinalTextoP.innerHTML = `
+                    <div class="signal-placeholder">
+                        <i class="fas fa-spinner fa-pulse"></i>
+                        <span>Aguardando sinal...</span>
+                    </div>`;
                 sinalTextoP.style.color = "var(--gray-color)";
             }
         }, 7000);
@@ -344,6 +306,7 @@ function verificarResultadoSinal(novaCorRegistrada) {
             coresQueFormaramGatilho: sinalResolvido.coresOrigemSinal ? [...sinalResolvido.coresOrigemSinal] : null,
             timestampResolvido: Date.now()
         };
+        
         ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
         sinalOriginalParaMartingale = null;
         atualizarEstatisticasDisplay();
@@ -354,30 +317,30 @@ function atualizarEstatisticasDisplay() {
     if (winsSpan) winsSpan.textContent = wins;
     if (greenWinsSpan) greenWinsSpan.textContent = greenWins;
     if (lossesSpan) lossesSpan.textContent = losses;
+
     localStorage.setItem('roletaWins', wins.toString());
     localStorage.setItem('roletaLosses', losses.toString());
     localStorage.setItem('roletaGreenWins', greenWins.toString());
     localStorage.setItem('roletaMartingaleWins', martingaleWins.toString());
+
     const totalSinaisResolvidos = wins + losses;
     const winRate = (totalSinaisResolvidos > 0) ? (wins / totalSinaisResolvidos * 100) : 0;
-    if (winRateSpan) winRateSpan.textContent = winRate.toFixed(2);
+    if (winRateSpan) {
+        winRateSpan.textContent = winRate.toFixed(2) + "%"; // Adicionado o % aqui
+    }
 }
 
-function exibirCoresApi(cores) { /* console.log("Cores API display:", cores); */ }
+function exibirCoresApi(cores) {
+    // console.log("Cores da API (Onix):", cores); // Exibe as cores recebidas
+}
 
-// MODIFICADO: mainLoop para incluir atualização da base de conhecimento
 async function mainLoop() {
     const coresAtuaisAPI = await obterCoresAPI();
 
     if (coresAtuaisAPI) {
-        exibirCoresApi(coresAtuaisAPI);
-        // Atualiza a base de conhecimento com o histórico mais recente ANTES de tentar gerar/resolver sinais
-        if (ultimosRegistradosAPI.length >= MIN_DYNAMIC_PATTERN_LENGTH + 1) { // Só atualiza se tiver histórico mínimo
-            atualizarBaseDeConhecimentoDinamica(ultimosRegistradosAPI);
-        }
-
+        // exibirCoresApi(coresAtuaisAPI); // Descomente para logar
         if (statusDiv && !statusDiv.title.startsWith("Erro:") && !sinalOriginalParaMartingale && !ultimoSinal.sinalEsperado) {
-             updateStatus("API OK (Worker). Monitorando...", false, true);
+             updateStatus("API OK (Onix via Worker). Monitorando...", false, true);
         }
 
         const dadosDaApiMudaram = (JSON.stringify(coresAtuaisAPI) !== JSON.stringify(ultimosRegistradosAPI));
@@ -387,8 +350,7 @@ async function mainLoop() {
         }
         
         if (!ultimoSinal.sinalEsperado && !sinalOriginalParaMartingale && (dadosDaApiMudaram || ultimosRegistradosAPI.length === 0)) {
-            // O false indica que não é para forçar martingale aqui; isso é decidido por verificarResultadoSinal
-            gerenciarSinais(coresAtuaisAPI, false); 
+            gerenciarSinais(coresAtuaisAPI, false);
         }
 
         if (dadosDaApiMudaram || ultimosRegistradosAPI.length === 0) {
@@ -398,59 +360,83 @@ async function mainLoop() {
 
     const agora = Date.now();
     if (agora - lastStatsLogTime >= STATS_INTERVAL) {
-        console.info(`--- Estatísticas (${new Date().toLocaleTimeString()}) ---`);
-        console.info(`Acertos: ${wins}, Verdes: ${greenWins}, MG Wins: ${martingaleWins}, Erros: ${losses}`);
-        const total = wins + losses;
-        const taxa = total > 0 ? (wins / total * 100).toFixed(2) : "0.00";
-        console.info(`Assertividade: ${taxa}%`);
-        console.info(`Base de Conhecimento: ${Object.keys(baseDeConhecimentoDinamica).length} padrões aprendidos.`);
+        console.info(`--- Estatísticas Cumulativas (${new Date().toLocaleTimeString()}) ---`);
+        console.info(`Acertos: ${wins}, Verdes: ${greenWins}, Martingale Wins: ${martingaleWins}, Erros: ${losses}`);
+        const totalConsiderandoMartingale = wins + losses; 
+        const taxa = totalConsiderandoMartingale > 0 ? (wins / totalConsiderandoMartingale * 100).toFixed(2) : "0.00";
+        console.info(`Assertividade (considerando ciclos com MG1): ${taxa}%`);
         console.info(`-------------------------------------------`);
         lastStatsLogTime = agora;
     }
 }
 
 function zerarEstatisticas() {
-    if (confirm("Zerar TODAS estatísticas e aprendizado dinâmico?")) {
-        wins = 0; losses = 0; greenWins = 0; martingaleWins = 0;
+    if (confirm("Tem certeza que deseja ZERAR TODAS as estatísticas? Esta ação não pode ser desfeita.")) {
+        wins = 0;
+        losses = 0;
+        greenWins = 0;
+        martingaleWins = 0;
         sinalOriginalParaMartingale = null;
-        baseDeConhecimentoDinamica = {}; // Limpa o aprendizado
-        ultimosRegistradosAPI = []; // Limpa o histórico para recomeçar o aprendizado
+        ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
+        ultimosGatilhosProcessados = {};
+        ultimoSinalResolvidoInfo = { gatilhoPadrao: null, coresQueFormaramGatilho: null, timestampResolvido: 0 };
 
-        localStorage.removeItem('roletaWins'); localStorage.removeItem('roletaLosses');
-        localStorage.removeItem('roletaGreenWins'); localStorage.removeItem('roletaMartingaleWins');
+        localStorage.removeItem('roletaWins');
+        localStorage.removeItem('roletaLosses');
+        localStorage.removeItem('roletaGreenWins');
+        localStorage.removeItem('roletaMartingaleWins');
 
         atualizarEstatisticasDisplay();
-        console.warn("ESTATÍSTICAS E APRENDIZADO DINÂMICO ZERADOS!");
-        updateStatus("Estatísticas e aprendizado zerados.", false, false);
+         if (sinalTextoP) { // Volta para o placeholder
+            sinalTextoP.innerHTML = `
+                <div class="signal-placeholder">
+                    <i class="fas fa-spinner fa-pulse"></i>
+                    <span>Aguardando sinal...</span>
+                </div>`;
+            sinalTextoP.style.color = "var(--gray-color)";
+        }
+        console.warn("ESTATÍSTICAS ZERADAS PELO USUÁRIO!");
+        updateStatus("Estatísticas zeradas.", false, false);
     }
 }
 
 // --- Inicialização ---
 document.addEventListener('DOMContentLoaded', () => {
-    if (sinalTextoP && !sinalTextoP.textContent.includes("SINAL") && !sinalTextoP.textContent.includes("MARTINGALE")) {
-        sinalTextoP.innerHTML = `<div class="signal-placeholder"><i class="fas fa-spinner fa-pulse"></i><span>Aguardando sinal...</span></div>`;
+    if (sinalTextoP && !sinalTextoP.textContent.includes("SINAL IDENTIFICADO") && !sinalTextoP.textContent.includes("MARTINGALE")) {
+        sinalTextoP.innerHTML = `
+            <div class="signal-placeholder">
+                <i class="fas fa-spinner fa-pulse"></i>
+                <span>Aguardando sinal...</span>
+            </div>`;
         sinalTextoP.style.color = "var(--gray-color)";
     }
+
     if (statusDiv) {
         statusDiv.innerHTML = '<i class="fas fa-info-circle"></i>';
-        statusDiv.title = "Bot Roleta Dinâmico Iniciado.";
+        statusDiv.title = "Bot Web da Roleta (Onix API) Iniciado."; // Atualizado título
         statusDiv.style.color = 'dodgerblue';
-    } else console.warn("Elemento statusDiv não encontrado.");
-    console.log("Bot Roleta Dinâmico Iniciado.");
+    } else {
+        console.warn("Elemento statusDiv não encontrado no DOM.");
+    }
+    console.log("Bot Web da Roleta (Onix API) Iniciado.");
 
-    atualizarEstatisticasDisplay();
-    lastStatsLogTime = Date.now();
-    mainLoop();
-    setInterval(mainLoop, CHECK_INTERVAL);
+    atualizarEstatisticasDisplay(); 
+    lastStatsLogTime = Date.now(); 
+    mainLoop(); 
+    setInterval(mainLoop, CHECK_INTERVAL); 
 
     if (refreshIframeButton) {
         refreshIframeButton.addEventListener('click', () => {
-            zerarEstatisticas();
+            zerarEstatisticas(); 
             if (casinoIframe) {
-                console.log("Atualizando iframe cassino...");
-                casinoIframe.src = casinoIframe.src;
-                updateStatus("Iframe cassino atualizado.", false, false);
+                console.log("Atualizando iframe do cassino...");
+                const currentSrc = casinoIframe.src;
+                casinoIframe.src = 'about:blank'; // Força descarregamento
+                setTimeout(() => { casinoIframe.src = currentSrc; }, 100); // Recarrega
+                updateStatus("Iframe do cassino atualizado e estatísticas zeradas.", false, false);
             }
         });
-    } else console.warn("Botão 'refresh-iframe' não encontrado.");
+    } else {
+        console.warn("Botão 'refresh-iframe' não encontrado no DOM.");
+    }
 });
