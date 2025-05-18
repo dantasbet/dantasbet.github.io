@@ -1,4 +1,4 @@
-// script_bacbo.js (COMPLETO E SINTAXE CORRIGIDA)
+// script_bacbo.js (COMPLETO E SINTAXE CORRIGIDA + LÓGICA MARTINGALE REVISADA)
 
 // --- Configuration ---
 const TARGET_API_URL_BACBO = 'https://onixapis.com:2083/public/api/evolution/bacbo-ao-vivo';
@@ -17,11 +17,10 @@ const NUM_CLASSES_BACBO = 2;
 let isTrainingBacBo = false;
 const ML_CONFIDENCE_THRESHOLD_BACBO = 0.58;
 
-// Constantes de Resultado (assumindo que estão definidas globalmente por resultados_bacbo.js)
-// const PLAYER_WIN = "PLAYER"; // Definido em resultados_bacbo.js
-// const BANKER_WIN = "BANKER"; // Definido em resultados_bacbo.js
-// const TIE_RESULT = "TIE";   // Definido em resultados_bacbo.js
-// const INVALID_RESULT = "inválido"; // Definido em resultados_bacbo.js
+const PLAYER_WIN = "PLAYER"; 
+const BANKER_WIN = "BANKER";
+const TIE_RESULT = "TIE";  
+const INVALID_RESULT = "inválido"; 
 
 const RESULTADO_TO_INDEX_ML_BACBO = { [PLAYER_WIN]: 0, [BANKER_WIN]: 1 };
 const INDEX_TO_RESULTADO_ML_BACBO = { 0: PLAYER_WIN, 1: BANKER_WIN };
@@ -57,40 +56,28 @@ function resultadosToInputTensorBacBo(resultadoSequence) {
     for (const resultado of resultadoSequence) {
         if (resultado === PLAYER_WIN) tensorData.push(1, 0);
         else if (resultado === BANKER_WIN) tensorData.push(0, 1);
-        else tensorData.push(0.5, 0.5); // TIE ou inválido
+        else tensorData.push(0.5, 0.5);
     }
     return tf.tensor2d([tensorData], [1, SEQUENCE_LENGTH_BACBO * NUM_FEATURES_PER_RESULT_BACBO]);
 }
 
 function prepareTrainingDataBacBo(historicoResultados) {
-    const xs_data = [];
-    const ys_data = [];
-    if (!historicoResultados || historicoResultados.length < SEQUENCE_LENGTH_BACBO + 1) {
-        return { xs: null, ys: null };
-    }
+    const xs_data = []; const ys_data = [];
+    if (!historicoResultados || historicoResultados.length < SEQUENCE_LENGTH_BACBO + 1) return { xs: null, ys: null };
     for (let i = 0; i <= historicoResultados.length - (SEQUENCE_LENGTH_BACBO + 1); i++) {
         const sequencia = historicoResultados.slice(i + 1, i + 1 + SEQUENCE_LENGTH_BACBO).reverse();
         const resultadoReal = historicoResultados[i];
         if ((resultadoReal === PLAYER_WIN || resultadoReal === BANKER_WIN) && !sequencia.includes(TIE_RESULT) && !sequencia.includes(INVALID_RESULT)) {
-            let sequenciaValidaParaInput = true;
-            const inputFeatures = [];
+            let sequenciaValidaParaInput = true; const inputFeatures = [];
             for (const res of sequencia) {
                 if (res === PLAYER_WIN) inputFeatures.push(1, 0);
                 else if (res === BANKER_WIN) inputFeatures.push(0, 1);
-                else { // Se encontrar TIE ou INVALID na sequência de input, ela não é válida para treinar P/B
-                    sequenciaValidaParaInput = false;
-                    break;
-                }
+                else { sequenciaValidaParaInput = false; break; }
             }
-            if (sequenciaValidaParaInput) {
-                xs_data.push(inputFeatures);
-                ys_data.push(RESULTADO_TO_INDEX_ML_BACBO[resultadoReal]);
-            }
+            if(sequenciaValidaParaInput) { xs_data.push(inputFeatures); ys_data.push(RESULTADO_TO_INDEX_ML_BACBO[resultadoReal]); }
         }
     }
-    if (xs_data.length === 0) {
-        return { xs: null, ys: null };
-    }
+    if (xs_data.length === 0) return { xs: null, ys: null };
     const xTensor = tf.tensor2d(xs_data, [xs_data.length, SEQUENCE_LENGTH_BACBO * NUM_FEATURES_PER_RESULT_BACBO]);
     const yTensor = tf.oneHot(tf.tensor1d(ys_data, 'int32'), NUM_CLASSES_BACBO);
     return { xs: xTensor, ys: yTensor };
@@ -109,65 +96,41 @@ function createModelTFBacBo() {
 async function trainModelTFBacBo(historicoResultados) {
     if (isTrainingBacBo || typeof tf === 'undefined' || !modelBacBo) return;
     if (!historicoResultados || historicoResultados.length < SEQUENCE_LENGTH_BACBO + 1) return;
-
     const { xs, ys } = prepareTrainingDataBacBo(historicoResultados);
-    if (!xs || xs.shape[0] === 0) {
-        if (xs) xs.dispose();
-        if (ys) ys.dispose();
-        return;
-    }
+    if (!xs || xs.shape[0] === 0) { if(xs)xs.dispose(); if(ys)ys.dispose(); return; }
     isTrainingBacBo = true;
     try {
         const batchSize = Math.max(4, Math.floor(xs.shape[0] / 4) || 4);
-        await modelBacBo.fit(xs, ys, {
-            epochs: 12, batchSize: batchSize, shuffle: true,
-            callbacks: { /* onEpochEnd: (epoch, logs) => { console.log(`Época TF ${epoch+1}: L=${logs.loss.toFixed(3)} A=${logs.acc.toFixed(3)}`); } */ }
-        });
-    } catch (e) { // Renomeado para 'e' para evitar conflito se 'error' for usado externamente
-        console.error("Erro Treino TF BacBo:", e);
-    } finally {
-        isTrainingBacBo = false;
-        if (xs) xs.dispose(); // Verifica se xs existe antes de chamar dispose
-        if (ys) ys.dispose(); // Verifica se ys existe antes de chamar dispose
-    }
+        await modelBacBo.fit(xs, ys, { epochs: 12, batchSize: batchSize, shuffle: true, callbacks: {} });
+    } catch (e) { console.error("Erro Treino TF BacBo:", e); }
+    finally { isTrainingBacBo = false; if(xs)xs.dispose(); if(ys)ys.dispose(); }
 }
 
 async function verificarSinalComMLBacBo(resultadosRecentes) {
     if (typeof tf === 'undefined' || !modelBacBo || !resultadosRecentes || resultadosRecentes.length < SEQUENCE_LENGTH_BACBO) return [null, null, null];
     const sequenciaParaPrever = resultadosRecentes.slice(0, SEQUENCE_LENGTH_BACBO).reverse();
     if (sequenciaParaPrever.includes(TIE_RESULT) || sequenciaParaPrever.includes(INVALID_RESULT)) return [null, null, null];
-
     let inputTensor;
     try {
         inputTensor = resultadosToInputTensorBacBo(sequenciaParaPrever);
         const predictionTensor = modelBacBo.predict(inputTensor);
-        const predictionData = await predictionTensor.data(); // .data() retorna Promise<Float32Array | Int32Array | Uint8Array>
+        const predictionData = await predictionTensor.data();
         tf.dispose(predictionTensor);
-
-        const probPlayer = predictionData[0];
-        const probBanker = predictionData[1];
+        const probPlayer = predictionData[0]; const probBanker = predictionData[1];
         console.log(`[BacBo ML Previsão] Após [${sequenciaParaPrever.join(',')}]: P=${probPlayer.toFixed(3)}, B=${probBanker.toFixed(3)}`);
-
         let sinalGerado = null;
         if (probPlayer > probBanker && probPlayer >= ML_CONFIDENCE_THRESHOLD_BACBO) sinalGerado = PLAYER_WIN;
         else if (probBanker > probPlayer && probBanker >= ML_CONFIDENCE_THRESHOLD_BACBO) sinalGerado = BANKER_WIN;
-        // Condições adicionais para pegar sinal se um deles atingir o threshold, mesmo que a diferença não seja grande
-        else if (probPlayer >= ML_CONFIDENCE_THRESHOLD_BACBO && probBanker < ML_CONFIDENCE_THRESHOLD_BACBO) sinalGerado = PLAYER_WIN;
-        else if (probBanker >= ML_CONFIDENCE_THRESHOLD_BACBO && probPlayer < ML_CONFIDENCE_THRESHOLD_BACBO) sinalGerado = BANKER_WIN;
-
+        else if (probPlayer >= ML_CONFIDENCE_THRESHOLD_BACBO && probBanker < ML_CONFIDENCE_THRESHOLD_BACBO) sinalGerado = PLAYER_WIN; // Ajuste para pegar um sinal se atingir o threshold
+        else if (probBanker >= ML_CONFIDENCE_THRESHOLD_BACBO && probPlayer < ML_CONFIDENCE_THRESHOLD_BACBO) sinalGerado = BANKER_WIN; // Ajuste para pegar um sinal se atingir o threshold
         if (sinalGerado) {
-            // const confianca = (sinalGerado === PLAYER_WIN) ? probPlayer : probBanker; // Já calculado
-            const resultadosGatilhoApiOrder = [...sequenciaParaPrever].reverse(); // Ordem da API (novo->antigo)
+            const resultadosGatilhoApiOrder = [...sequenciaParaPrever].reverse();
             return [sinalGerado, resultadosGatilhoApiOrder.join(','), resultadosGatilhoApiOrder];
         }
-    } catch (e) {
-        console.error("Erro na previsão ML BacBo:", e);
-    } finally {
-        if (inputTensor) inputTensor.dispose();
-    }
+    } catch (e) { console.error("Erro na previsão ML BacBo:", e); }
+    finally { if (inputTensor) inputTensor.dispose(); }
     return [null, null, null];
 }
-
 
 // --- Funções Principais do Bot ---
 function updateStatusBacBo(message, isError = false, isSuccess = false) {
@@ -199,7 +162,7 @@ async function obterResultadosApiBacBo() {
             }
         }
         updateStatusBacBo(`Dados API (BacBo) formato inesperado. Esperando chave: ${NOME_CHAVE_API_BACBO}`, true); return null;
-    } catch (e) { // Renomeado para 'e'
+    } catch (e) {
         if (e.name === 'AbortError') updateStatusBacBo("Timeout API (BacBo).", true);
         else updateStatusBacBo(`ERRO FETCH (BacBo): ${e.message.substring(0,30)}`, true);
         console.error("Erro fetch (BacBo):", e); return null;
@@ -223,10 +186,10 @@ function definirSinalAtivoBacBo(resultadoSinal, gatilhoId, resultadosGatilho, eh
     ultimosGatilhosProcessadosBacBo[gatilhoId] = agora;
     if (ehMartingaleIntent) sinalOriginalParaMartingaleBacBo = null;
 
-    const sU = ultimoSinalBacBo.sinalEsperado.toUpperCase(); // Renomeado para evitar conflito
+    const sU = ultimoSinalBacBo.sinalEsperado.toUpperCase();
     const nomeSinalDisplay = "OPORTUNIDADE BACBO";
     const msg = ultimoSinalBacBo.ehMartingale ? `🔄 MARTINGALE 1\n➡️ Entrar no ${sU}` : `🎲 ${nomeSinalDisplay}\n➡️ Entrar no ${sU}`;
-    const colorDisplay = ultimoSinalBacBo.ehMartingale ? "var(--secondary-color)" : "var(--accent-color)"; // Renomeado
+    const colorDisplay = ultimoSinalBacBo.ehMartingale ? "var(--secondary-color)" : "var(--accent-color)";
 
     if (sinalTextoPBacBo) {
         sinalTextoPBacBo.innerHTML = msg.replace(/\n/g, '<br>');
@@ -235,19 +198,21 @@ function definirSinalAtivoBacBo(resultadoSinal, gatilhoId, resultadosGatilho, eh
         if(ph) ph.remove();
     }
     updateStatusBacBo(`Sinal: ${sU}${ultimoSinalBacBo.ehMartingale ? ' (Martingale 1)' : ''}`, false, false);
-    console.log(`SINAL ATIVO: ${sU} ${ultimoSinalBacBo.ehMartingale ? '(MG1)' : ''} | Gatilho: ${gId}`);
+    console.log(`SINAL ATIVO: ${sU} ${ultimoSinalBacBo.ehMartingale ? '(MG1)' : ''} | Gatilho: ${gatilhoId}`);
     return true;
 }
 
+// CORRIGIDO E REFINADO: verificarResultadoSinalBacBo
 function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
     if (!ultimoSinalBacBo.sinalEsperado) {
-        return;
+        return; // NENHUM SINAL ATIVO PARA VERIFICAR.
     }
 
     const sinalResolvido = { ...ultimoSinalBacBo };
     let msgResultado = "", resultadoCorTexto = "var(--accent-color)";
-    let vitoriaNoCiclo = false;
-    let necessitaMartingale = false;
+    let vitoriaParaContabilizar = false;
+    let derrotaParaContabilizar = false;
+    let prepararParaMartingale = false;
 
     console.log(`[RESULTADO] Sinal: ${sinalResolvido.sinalEsperado}${sinalResolvido.ehMartingale ? '(MG1)' : ''}. Saiu: ${novoResultadoRegistrado}`);
 
@@ -257,16 +222,16 @@ function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
         resultadoCorTexto = "var(--warning-color)";
         if (sinalResolvido.ehMartingale) {
             msgResultado = "⚠️ EMPATE NO MARTINGALE! (Ciclo perdido)";
-            vitoriaNoCiclo = false; // TIE no MG é perda do ciclo de aposta
-            lossesBacBo++; // Contabiliza a perda do ciclo do Martingale
+            derrotaParaContabilizar = true; // TIE no Martingale é tratado como perda do ciclo
             console.log("[RESULTADO] Empate no Martingale. Ciclo encerrado com perda.");
         } else {
-            necessitaMartingale = true;
+            // TIE no sinal normal: Prepara para Martingale na mesma aposta.
+            prepararParaMartingale = true;
             sinalOriginalParaMartingaleBacBo = { ...sinalResolvido };
             console.log(`[RESULTADO] Empate no sinal (${sinalResolvido.sinalEsperado}). Preparando Martingale.`);
         }
     } else if (novoResultadoRegistrado === sinalResolvido.sinalEsperado) {
-        vitoriaNoCiclo = true;
+        vitoriaParaContabilizar = true;
         msgResultado = sinalResolvido.ehMartingale ? "🎯 MARTINGALE GANHO! ✅" : "🎯 ACERTO! ✅";
         if (sinalResolvido.ehMartingale) martingaleWinsBacBo++;
         resultadoCorTexto = "var(--success-color)";
@@ -274,42 +239,43 @@ function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
     } else { // Perdeu (Player vs Banker, não foi Tie)
         if (sinalResolvido.ehMartingale) {
             msgResultado = "❌ ERRO NO MARTINGALE! 👎";
-            vitoriaNoCiclo = false; // Perdeu o ciclo
-            lossesBacBo++; // Contabiliza a perda do ciclo do Martingale
+            derrotaParaContabilizar = true;
             resultadoCorTexto = "var(--danger-color)";
             console.log("[RESULTADO] Erro no Martingale. Ciclo encerrado com perda.");
         } else {
-            necessitaMartingale = true;
+            // Sinal normal falhou: Prepara para Martingale
+            prepararParaMartingale = true;
             sinalOriginalParaMartingaleBacBo = { ...sinalResolvido };
             console.log(`[RESULTADO] Falha no sinal (${sinalResolvido.sinalEsperado}). Preparando Martingale.`);
         }
     }
 
-    // Limpa o sinal ativo atual para permitir um novo (ou Martingale) ser definido
+    // Limpa o sinal ativo atual APÓS processar seu resultado
     ultimoSinalBacBo = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
 
-    if (necessitaMartingale) {
-        // Se necessita Martingale, apenas atualiza o display com Empate (se foi) e estatísticas de TIE
-        // e retorna para o mainLoop tentar definir o Martingale.
+    if (prepararParaMartingale) {
+        // Se vai para Martingale, exibe a mensagem de Empate (se foi) ou nenhuma msg de erro ainda.
+        // E retorna para o mainLoop tentar definir o Martingale.
         if (novoResultadoRegistrado === TIE_RESULT && sinalTextoPBacBo) {
             sinalTextoPBacBo.innerHTML = msgResultado.replace(/\n/g, '<br>');
             sinalTextoPBacBo.style.color = resultadoCorTexto;
         }
-        atualizarEstatisticasBacBo(); // Atualiza contagem de empates
+        atualizarEstatisticasBacBo(); // Para registrar o TIE
         return;
     }
 
-    // Se o ciclo encerrou (não necessita Martingale):
-    if (vitoriaNoCiclo) {
+    // Se o ciclo encerrou (não vai para Martingale):
+    if (vitoriaParaContabilizar) {
         winsBacBo++;
+    } else if (derrotaParaContabilizar) {
+        lossesBacBo++;
     }
-    // lossesBacBo já foi tratado acima para os casos de perda no Martingale ou Tie no Martingale
 
     if (sinalTextoPBacBo) {
         sinalTextoPBacBo.innerHTML = msgResultado.replace(/\n/g, '<br>');
         sinalTextoPBacBo.style.color = resultadoCorTexto;
     }
-    updateStatusBacBo(`Resultado (${sinalResolvido.sinalEsperado.toUpperCase()}): ${msgResultado.split('\n')[0]}`, false, vitoriaNoCiclo);
+    updateStatusBacBo(`Resultado (${sinalResolvido.sinalEsperado.toUpperCase()}): ${msgResultado.split('\n')[0]}`, false, vitoriaParaContabilizar);
 
     setTimeout(() => {
         if (sinalTextoPBacBo && sinalTextoPBacBo.innerHTML.includes(msgResultado.split('\n')[0]) && !ultimoSinalBacBo.sinalEsperado) {
@@ -327,7 +293,6 @@ function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
     atualizarEstatisticasBacBo();
 }
 
-
 function atualizarEstatisticasBacBo() {
     if (winsSpanBacBo) winsSpanBacBo.textContent = winsBacBo;
     if (tieResultsSpanBacBo) tieResultsSpanBacBo.textContent = tieResultsBacBo;
@@ -344,7 +309,7 @@ function atualizarEstatisticasBacBo() {
 async function mainLoopBacBo() {
     const resultadosRecebidosDaAPI = await obterResultadosApiBacBo();
     if (resultadosRecebidosDaAPI && resultadosRecebidosDaAPI.length > 0) {
-        if (typeof tf !== 'undefined' && modelBacBo) {
+        if (typeof tf !== 'undefined' && modelBacBo && !isTrainingBacBo) { // Não treina se já estiver treinando
              await trainModelTFBacBo(resultadosRecebidosDaAPI);
         }
         const dadosMudaram = (JSON.stringify(resultadosRecebidosDaAPI) !== JSON.stringify(ultimosResultadosApiBacBo));
@@ -361,15 +326,16 @@ async function mainLoopBacBo() {
 
         const podeGerarSinalML = ultimosResultadosApiBacBo.length >= SEQUENCE_LENGTH_BACBO;
         if (!ultimoSinalBacBo.sinalEsperado && // Só tenta gerar se não houver sinal ativo
-            (dadosMudaram || (podeGerarSinalML && ultimosResultadosApiBacBo.length === SEQUENCE_LENGTH_BACBO && !isTrainingBacBo)) // E os dados mudaram ou é a primeira vez com dados suficientes e não está treinando
+            (dadosMudaram || (podeGerarSinalML && !isTrainingBacBo && ultimosResultadosApiBacBo.length >= SEQUENCE_LENGTH_BACBO)) 
            ) {
             if (sinalOriginalParaMartingaleBacBo) {
                 const resultadoMartingale = sinalOriginalParaMartingaleBacBo.sinalEsperado;
                 const gatilhoOriginal = sinalOriginalParaMartingaleBacBo.gatilhoPadrao;
                 const resultadosOriginais = sinalOriginalParaMartingaleBacBo.coresOrigemSinal;
+                console.log(`[MainLoop] Tentando definir Martingale BacBo para: ${resultadoMartingale.toUpperCase()}`);
                 definirSinalAtivoBacBo(resultadoMartingale, gatilhoOriginal, resultadosOriginais, true);
             } else {
-                if (typeof tf !== 'undefined' && modelBacBo && podeGerarSinalML) {
+                if (typeof tf !== 'undefined' && modelBacBo && podeGerarSinalML && !isTrainingBacBo) {
                     const [sinalML, gatilhoMLStr, resultadosMLArr] = await verificarSinalComMLBacBo(ultimosResultadosApiBacBo);
                     if (sinalML) {
                         definirSinalAtivoBacBo(sinalML, gatilhoMLStr, resultadosMLArr, false);
