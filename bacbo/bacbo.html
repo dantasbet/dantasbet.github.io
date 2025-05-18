@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roleta Bot Monitor | Cassino Elegante</title>
+    <title>Bac Bo Bot Monitor | Cassino Elegante</title> <!-- TÍTULO ATUALIZADO -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css"> <!-- Pode usar o mesmo style.css ou criar um novo -->
 </head>
 <body>
     <div class="status-indicator" id="status" title="Carregando...">
@@ -15,13 +15,12 @@
 
     <header class="glass-header">
         <div class="header-content">
-            <h1><i class="fas fa-robot"></i> Roleta Bot Monitor <span class="divider"></h1>
-                <a href="bacbo/bacbo.html">BacBo</a>
+            <h1><i class="fas fa-dice"></i> Bac Bo Bot Monitor <span class="divider"></h1> <!-- ÍCONE E NOME ATUALIZADOS -->
+            <a href="../index.html">Roleta</a>
         </div>
     </header>
 
     <main class="main-content">
-        <!-- Seção do Bot -->
         <div class="bot-section glass-card">
             <section id="sinal-atual">
                 <div class="section-header">
@@ -35,32 +34,30 @@
                 </div>
             </section>
 
-            <!-- MODIFICAÇÃO: Seção do Cassino (Iframe) movida para cá -->
             <div class="casino-section glass-card">
                 <div class="section-header">
-                    <h2><i class="fas fa-play-circle"></i> Cassino Ao Vivo</h2>
+                    <h2><i class="fas fa-play-circle"></i> Cassino Ao Vivo - Bac Bo</h2>
                     <div class="provider-badge">
-                        <span>1pra1.bet</span>
+                        <span>1pra1.bet</span> <!-- Ajustar se necessário -->
                         <i class="fas fa-external-link-alt"></i>
                     </div>
                 </div>
                 <div class="iframe-wrapper">
                     <iframe
                         id="casino-iframe"
-                        src="https://1pra1.bet.br/live-casino/game/2975361?provider=Pragmatic&from=%2Flive-casino"
+                        src="https://1pra1.bet.br/live-casino/game/2633669?provider=Evolution&from=%2Flive-casino" 
                         frameborder="0"
                         scrolling="auto"
-                        title="Cassino 1pra1.bet">
+                        title="Cassino Bac Bo Ao Vivo">
                     </iframe>
                 </div>
                 <div class="iframe-footer">
                     <button class="btn-refresh" id="refresh-iframe"><i class="fas fa-sync-alt"></i> Atualizar</button>
-                    <a href="https://www.1pra1.bet/" target="_blank" class="btn-external">
+                    <a href="https://1pra1.bet.br/live-casino/game/2975361?provider=Pragmatic&from=%2Flive-casino" target="_blank" class="btn-external"> <!-- LINK DIRETO PARA O JOGO BAC BO -->
                         <i class="fas fa-external-link-alt"></i> Acessar diretamente
                     </a>
                 </div>
             </div>
-            <!-- Fim da Seção do Cassino (Iframe) -->
 
             <section id="estatisticas">
                 <h2><i class="fas fa-chart-line"></i> Estatísticas</h2>
@@ -72,11 +69,11 @@
                             <span class="stat-value" id="wins">0</span>
                         </div>
                     </div>
-                    <div class="stat-item green">
-                        <div class="stat-icon"><i class="fas fa-leaf"></i></div>
+                    <div class="stat-item warning"> <!-- MUDADO PARA WARNING OU OUTRA COR PARA EMPATES -->
+                        <div class="stat-icon"><i class="fas fa-equals"></i></div> <!-- ÍCONE DE EMPATE -->
                         <div class="stat-content">
-                            <span class="stat-label">Verdes</span>
-                            <span class="stat-value" id="green-wins">0</span>
+                            <span class="stat-label">Empates</span> <!-- MUDADO DE VERDES PARA EMPATES -->
+                            <span class="stat-value" id="tie-results">0</span> <!-- ID MUDADO -->
                         </div>
                     </div>
                     <div class="stat-item danger">
@@ -96,21 +93,15 @@
                 </div>
             </section>
         </div>
-        <!-- Fim da Seção do Bot -->
-
-        <!-- A Seção do Cassino foi movida para dentro da "bot-section" -->
-        <!-- Portanto, o .casino-section original aqui embaixo pode ser removido se você não tiver outros planos para ele -->
-        <!-- <div class="casino-section glass-card"> ... </div> -->
-
     </main>
 
     <footer class="glass-footer">
         <p><i class="fas fa-info-circle"></i> Jogue com responsabilidade. Apenas para maiores de 18 anos.</p>
     </footer>
 
-    <script src="padroes.js"></script>
-    <script src="cores_roleta.js"></script>
-    <script src="script.js"></script>
+    <!-- Scripts para Bac Bo -->
+    <script src="resultados_bacbo.js"></script> <!-- NOVO ARQUIVO JS -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="script_bacbo.js"></script>    <!-- NOVO ARQUIVO JS PRINCIPAL -->
 </body>
 </html>

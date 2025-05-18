@@ -1,0 +1,382 @@
+/* style.css - Versão Moderna e Elegante */
+:root {
+    /* ... (suas variáveis permanecem as mesmas) ... */
+    --primary-color: #4361ee;
+    --primary-dark: #3a0ca3;
+    --secondary-color: #7209b7;
+    --accent-color: #f72585;
+    --success-color: #4cc9f0;
+    --danger-color: #f94144;
+    --warning-color: #f8961e;
+    --green-color: #2ec4b6;
+    
+    --dark-color: #14213d;
+    --darker-color: #0a1128;
+    --light-color: #f8f9fa;
+    --lighter-color: #ffffff;
+    --gray-color: #adb5bd;
+    
+    --glass-color: rgba(255, 255, 255, 0.08);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(12px);
+    
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 1.5rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+    
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 16px;
+    
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.25rem;
+    --font-size-xl: 1.5rem;
+    
+    --iframe-scale-factor: 0.9;
+    --iframe-compensated-width: calc(100% / var(--iframe-scale-factor));
+    --iframe-compensated-height: calc(100% / var(--iframe-scale-factor));
+    --iframe-wrapper-height: 500px; 
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    height: 100%; /* Necessário para o layout de altura total */
+}
+
+body {
+    font-family: var(--font-family);
+    background: #111C37;
+    color: var(--light-color);
+    line-height: 1.6;
+    min-height: 100%; /* MODIFICAÇÃO: para layout de altura total com flex */
+    display: flex; /* MODIFICAÇÃO: Torna o body um container flex */
+    flex-direction: column; /* MODIFICAÇÃO: Organiza os filhos verticalmente */
+    overflow-x: hidden; /* Mantém o overflow horizontal escondido */
+    /* padding-bottom removido pois o footer não é mais 'fixed' da mesma maneira */
+}
+
+/* Efeito Glassmorphism */
+.glass-card {
+    background: var(--glass-color);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--border-radius-lg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
+}
+
+.glass-header {
+    background: rgba(67, 97, 238, 0.15);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-md) 0;
+    width: 100%; /* Garante largura total */
+    z-index: 100; /* Mantém um z-index para sobreposição controlada se necessário */
+    /* position: fixed removido */
+    /* top, left, right removidos */
+    flex-shrink: 0; /* MODIFICAÇÃO: Impede que o header encolha */
+}
+
+.glass-footer {
+    background: rgba(20, 33, 61, 0.8);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--space-md);
+    width: 100%; /* Garante largura total */
+    text-align: center;
+    font-size: var(--font-size-sm);
+    z-index: 100;
+    /* position: fixed removido */
+    /* bottom, left, right removidos */
+    flex-shrink: 0; /* MODIFICAÇÃO: Impede que o footer encolha */
+    margin-top: auto; /* MODIFICAÇÃO: Empurra o footer para o final se o conteúdo for pequeno */
+}
+
+/* Status Indicator */
+.status-indicator {
+    position: fixed; /* Este pode permanecer fixo, pois é um pequeno elemento de overlay */
+    top: var(--space-md);
+    left: var(--space-md);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--glass-color);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1001; 
+    cursor: help;
+    transition: all 0.3s ease;
+    color: var(--light-color);
+    font-size: 1.2rem;
+}
+
+.status-indicator:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Header */
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-xs);
+}
+
+header h1 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--lighter-color);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+header h1 .divider {
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 300;
+}
+
+header h1 .casino-name {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+/* Main Content */
+.main-content {
+    max-width: 1200px;
+    width: 100%; /* Ocupa a largura disponível dentro do body flex */
+    margin: 0 auto; /* Centraliza horizontalmente */
+    padding: var(--space-md); /* Padding interno */
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+    
+    /* MODIFICAÇÃO: Faz o conteúdo principal preencher o espaço restante e ser rolável */
+    flex-grow: 1; 
+    overflow-y: auto; /* Adiciona scroll vertical APENAS ao main-content */
+    /* margin-top e margin-bottom removidos, pois o flex layout cuida do espaçamento */
+}
+
+
+/* Bot Section */
+.bot-section {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.section-header h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-lg);
+    color: var(--lighter-color);
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0;
+}
+
+.signal-timer {
+    background: rgba(114, 9, 183, 0.2);
+    color: var(--secondary-color);
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Signal Display */
+.signal-display {
+    background: rgba(10, 17, 40, 0.5);
+    border-radius: var(--border-radius-md);
+    padding: var(--space-md);
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--accent-color);
+    border: 1px dashed rgba(247, 37, 133, 0.3);
+    transition: all 0.3s ease;
+}
+
+.signal-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--gray-color);
+    font-size: var(--font-size-md);
+}
+
+/* Statistics */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-sm);
+}
+
+.stat-item {
+    padding: var(--space-sm);
+    border-radius: var(--border-radius-md);
+    display: flex;
+    gap: var(--space-sm);
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover { transform: translateY(-3px); }
+.stat-item.success { background: rgba(76, 201, 240, 0.1); border: 1px solid rgba(76, 201, 240, 0.2); }
+.stat-item.green { background: rgba(46, 196, 182, 0.1); border: 1px solid rgba(46, 196, 182, 0.2); }
+.stat-item.danger { background: rgba(249, 65, 68, 0.1); border: 1px solid rgba(249, 65, 68, 0.2); }
+.stat-item.primary { background: rgba(67, 97, 238, 0.1); border: 1px solid rgba(67, 97, 238, 0.2); }
+.stat-icon { font-size: 1.5rem; display: flex; align-items: center; }
+.stat-item.success .stat-icon { color: var(--success-color); }
+.stat-item.green .stat-icon { color: var(--green-color); }
+.stat-item.danger .stat-icon { color: var(--danger-color); }
+.stat-item.primary .stat-icon { color: var(--primary-color); }
+.stat-content { display: flex; flex-direction: column; }
+.stat-label { font-size: var(--font-size-sm); color: var(--gray-color); }
+.stat-value { font-weight: 600; font-size: var(--font-size-lg); }
+
+/* Casino Section */
+.casino-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md); /* Adicionado padding para consistência, se necessário */
+    background: #242E47;
+}
+
+.provider-badge {
+    background: rgba(114, 9, 183, 0.2);
+    color: var(--secondary-color);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Iframe Styles */
+.iframe-wrapper {
+    position: relative;
+    width: 100%;
+    height: var(--iframe-wrapper-height);
+    overflow: hidden;
+    border-radius: var(--border-radius-md);
+}
+
+.iframe-wrapper iframe {
+    width: var(--iframe-compensated-width);
+    height: var(--iframe-compensated-height);
+    transform: scale(var(--iframe-scale-factor));
+    transform-origin: 0 0;
+    border: none;
+}
+
+.iframe-footer {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+.btn-refresh, .btn-external {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-grow: 1;
+    justify-content: center;
+}
+.btn-refresh { background: rgba(67, 97, 238, 0.1); color: var(--primary-color); border: 1px solid rgba(67, 97, 238, 0.3); }
+.btn-refresh:hover { background: rgba(67, 97, 238, 0.2); }
+.btn-external { background: rgba(247, 37, 133, 0.1); color: var(--accent-color); border: 1px solid rgba(247, 37, 133, 0.3); text-decoration: none; }
+.btn-external:hover { background: rgba(247, 37, 133, 0.2); }
+
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    :root {
+        --iframe-wrapper-height: 650px; 
+    }
+    /* .main-content margin-top não é mais necessário como antes */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --iframe-wrapper-height: 650px; 
+        --space-md: 1rem;
+    }
+    header h1 { font-size: var(--font-size-md); }
+    /* .main-content margin-top não é mais necessário como antes */
+    .stats-grid { grid-template-columns: 1fr; }
+    .iframe-footer { flex-direction: column; }
+    .btn-refresh, .btn-external { width: 100%; justify-content: center; }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.5s ease forwards; }
+
+/* Utility Classes */
+.text-success { color: var(--success-color); }
+.text-danger { color: var(--danger-color); }
+.text-warning { color: var(--warning-color); }
+.text-green { color: var(--green-color); }
