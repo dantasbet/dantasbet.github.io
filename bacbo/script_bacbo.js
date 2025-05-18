@@ -261,7 +261,7 @@ function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
 
     ultimoSinalResolvidoInfoBacBo = {
         gatilhoPadrao: sinalResolvido.gatilhoPadrao,
-        coresQueFormaramGatilho: sinalResolvido.coresOrigemSinal,
+        coresQueFormaramGatilho: sinalResolvido.coresOrigemSinal ? [...sinalResolvido.coresOrigemSinal] : null,
         timestampResolvido: Date.now()
     };
 
@@ -284,23 +284,22 @@ function verificarResultadoSinalBacBo(novoResultadoRegistrado) {
     if (winRateSpanBacBo) winRateSpanBacBo.textContent = `${winRate}%`;
 
     updateStatusBacBo(`Resultado processado: ${msgResultado}`, false, true);
-}
 
+    // Reset UI após delay
     setTimeout(() => {
         if (sinalTextoPBacBo && sinalTextoPBacBo.innerHTML.includes(msgResultado.split('\n')[0]) && !ultimoSinalBacBo.sinalEsperado) {
-             sinalTextoPBacBo.innerHTML = `<div class="signal-placeholder"><i class="fas fa-spinner fa-pulse"></i><span>Aguardando sinal...</span></div>`;
-             sinalTextoPBacBo.style.color = "var(--gray-color)";
+            sinalTextoPBacBo.innerHTML = `<div class="signal-placeholder"><i class="fas fa-spinner fa-pulse"></i><span>Aguardando sinal...</span></div>`;
+            sinalTextoPBacBo.style.color = "var(--gray-color)";
         }
     }, 7000);
 
-    ultimoSinalResolvidoInfoBacBo = {
-        gatilhoPadrao: sinalResolvido.gatilhoPadrao,
-        coresQueFormaramGatilho: sinalResolvido.coresOrigemSinal ? [...sinalResolvido.coresOrigemSinal] : null,
-        timestampResolvido: Date.now()
-    };
-    sinalOriginalParaMartingaleBacBo = null; // Ciclo encerrado, limpa
+    // Limpa martingale
+    sinalOriginalParaMartingaleBacBo = null;
+
+    // Atualiza estatísticas gerais
     atualizarEstatisticasBacBo();
 }
+
 
 function atualizarEstatisticasBacBo() {
     if (winsSpanBacBo) winsSpanBacBo.textContent = winsBacBo;
