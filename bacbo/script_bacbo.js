@@ -169,7 +169,9 @@ async function obterResultadosApiBacBo() {
         clearTimeout(timeoutId);
         if (!response.ok) { updateStatusBacBo(`Erro HTTP ${response.status} (BacBo)`, true); return null; }
         const dados = await response.json();
-        const NOME_CHAVE_API_BACBO = "BacBo - Ao Vivo"; // <<< VERIFIQUE E AJUSTE ESTA CHAVE!!!
+        // Em script_bacbo.js
+// const NOME_CHAVE_API_BACBO = "BacBo - Ao Vivo"; // LINHA ANTIGA E INCORRETA
+const NOME_CHAVE_API_BACBO = "history";        // LINHA CORRIGIDA // <<< VERIFIQUE E AJUSTE ESTA CHAVE!!!
         
         if (dados && dados[NOME_CHAVE_API_BACBO] && Array.isArray(dados[NOME_CHAVE_API_BACBO])) {
             const resultadosCrus = dados[NOME_CHAVE_API_BACBO];
