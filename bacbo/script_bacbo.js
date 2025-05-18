@@ -17,7 +17,7 @@ const SEQUENCE_LENGTH_BACBO = 5; // Pode até aumentar um pouco se tiver mais da
 const NUM_FEATURES_PER_RESULT_BACBO = 2;
 const NUM_CLASSES_BACBO = 2;
 let isTrainingBacBo = false;
-const ML_CONFIDENCE_THRESHOLD_BACBO = 0.60;
+const ML_CONFIDENCE_THRESHOLD_BACBO = 0.70;
 
 const RESULTADO_TO_INDEX_ML_BACBO = { [PLAYER_WIN]: 0, [BANKER_WIN]: 1 };
 const INDEX_TO_RESULTADO_ML_BACBO = { 0: PLAYER_WIN, 1: BANKER_WIN };
