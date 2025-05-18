@@ -1,4 +1,4 @@
-// script.js (Frontend com TensorFlow.js para API Onix)
+// script.js (Frontend com TensorFlow.js para API Onix - CORRIGIDO)
 
 // --- Configuration ---
 const TARGET_API_URL = 'https://onixapis.com:2053/public/api/pragmatic/237';
@@ -6,33 +6,32 @@ const PROXY_WORKER_URL = 'https://proxy-worker-roleta.dantasbet.workers.dev/';
 const API_URL = `${PROXY_WORKER_URL}?url=${encodeURIComponent(TARGET_API_URL)}`;
 
 const API_TIMEOUT = 15000;
-const CHECK_INTERVAL = 6000; // Aumentado um pouco para dar tempo ao TF.js
-const MAX_CORES_API = 20;    // Usaremos os 20 da API Onix
-const SIGNAL_COOLDOWN = 5000;
+const CHECK_INTERVAL = 6000;
+const MAX_CORES_API = 20;
+const SIGNAL_COOLDOWN = 5000; // Cooldown para o mesmo gatilho (sequência de cores)
 const STATS_INTERVAL = 60 * 10 * 1000;
 
 // --- TensorFlow.js Configurações e Variáveis Globais ---
 let model;
-const SEQUENCE_LENGTH = 5; // Usar as últimas 5 cores para prever a próxima
-const NUM_FEATURES_PER_COLOR = 2; // Para one-hot encoding (Vermelho=[1,0], Preto=[0,1])
-const NUM_CLASSES = 2; // Prever Vermelho ou Preto
+const SEQUENCE_LENGTH = 5;
+const NUM_FEATURES_PER_COLOR = 2;
+const NUM_CLASSES = 2;
 let isTraining = false;
-const ML_CONFIDENCE_THRESHOLD = 0.65; // Confiança mínima para sinal da ML
+const ML_CONFIDENCE_THRESHOLD = 0.60; // Reduzido um pouco para mais sinais, ajuste conforme necessário
 
-// Mapeamento de cores (simplificado para V/P na ML)
-const COLOR_TO_INDEX_ML = { 'vermelho': 0, 'preto': 1 }; // Usado para labels Y
-const INDEX_TO_COLOR_ML = { 0: 'vermelho', 1: 'preto' }; // Usado para interpretar predição
+const COLOR_TO_INDEX_ML = { 'vermelho': 0, 'preto': 1 };
+const INDEX_TO_COLOR_ML = { 0: 'vermelho', 1: 'preto' };
 
-// --- Global State (Original) ---
-let ultimosRegistradosAPI = []; // Os últimos 20 da API, após `identificarCor`
+// --- Global State ---
+let ultimosRegistradosAPI = [];
 let ultimoSinal = {
     sinalEsperado: null,
-    gatilhoPadrao: null,        // String do gatilho (padrão ML ou padrão fixo JSON)
+    gatilhoPadrao: null,        // String da sequência de cores que gerou o sinal (ML)
     timestampGerado: null,
-    coresOrigemSinal: null,     // Array das cores que formaram o gatilho
+    coresOrigemSinal: null,
     ehMartingale: false
 };
-let sinalOriginalParaMartingale = null;
+let sinalOriginalParaMartingale = null; // Guarda info do sinal que falhou e precisa de Martingale
 let ultimosGatilhosProcessados = {};
 let ultimoSinalResolvidoInfo = {
     gatilhoPadrao: null,
@@ -69,13 +68,11 @@ function colorsToInputTensor(colorSequence) {
 function prepareTrainingData(historicoCores) {
     const xs_data = [];
     const ys_data = [];
-
     if (!historicoCores || historicoCores.length < SEQUENCE_LENGTH + 1) return { xs: null, ys: null };
 
     for (let i = 0; i <= historicoCores.length - (SEQUENCE_LENGTH + 1); i++) {
-        const sequencia = historicoCores.slice(i + 1, i + 1 + SEQUENCE_LENGTH).reverse(); // Antigo->Novo
-        const resultado = historicoCores[i]; // O que veio depois
-
+        const sequencia = historicoCores.slice(i + 1, i + 1 + SEQUENCE_LENGTH).reverse();
+        const resultado = historicoCores[i];
         if ((resultado === 'vermelho' || resultado === 'preto') && !sequencia.includes('verde')) {
             const inputFeatures = [];
             for (const color of sequencia) {
@@ -86,9 +83,7 @@ function prepareTrainingData(historicoCores) {
             ys_data.push(COLOR_TO_INDEX_ML[resultado]);
         }
     }
-
     if (xs_data.length === 0) return { xs: null, ys: null };
-
     const xTensor = tf.tensor2d(xs_data, [xs_data.length, SEQUENCE_LENGTH * NUM_FEATURES_PER_COLOR]);
     const yTensor = tf.oneHot(tf.tensor1d(ys_data, 'int32'), NUM_CLASSES);
     return { xs: xTensor, ys: yTensor };
@@ -96,21 +91,10 @@ function prepareTrainingData(historicoCores) {
 
 function createModelTF() {
     const newModel = tf.sequential();
-    newModel.add(tf.layers.dense({
-        inputShape: [SEQUENCE_LENGTH * NUM_FEATURES_PER_COLOR],
-        units: 16,
-        activation: 'relu'
-    }));
-    newModel.add(tf.layers.dropout({ rate: 0.3 })); // Aumentado dropout rate
-    newModel.add(tf.layers.dense({
-        units: NUM_CLASSES,
-        activation: 'softmax'
-    }));
-    newModel.compile({
-        optimizer: tf.train.adam(0.005), // Aumentada learning rate
-        loss: 'categoricalCrossentropy',
-        metrics: ['accuracy']
-    });
+    newModel.add(tf.layers.dense({ inputShape: [SEQUENCE_LENGTH * NUM_FEATURES_PER_COLOR], units: 20, activation: 'relu' })); // Aumentado units
+    newModel.add(tf.layers.dropout({ rate: 0.25 }));
+    newModel.add(tf.layers.dense({ units: NUM_CLASSES, activation: 'softmax' }));
+    newModel.compile({ optimizer: tf.train.adam(0.002), loss: 'categoricalCrossentropy', metrics: ['accuracy'] }); // Ajustado learning rate
     console.log("Modelo TensorFlow.js criado.");
     return newModel;
 }
@@ -120,41 +104,21 @@ async function trainModelTF(historicoCores) {
     if (!historicoCores || historicoCores.length < SEQUENCE_LENGTH + 1) return;
 
     const { xs, ys } = prepareTrainingData(historicoCores);
-    if (!xs || xs.shape[0] === 0) {
-        if(xs) xs.dispose();
-        if(ys) ys.dispose();
-        return;
-    }
+    if (!xs || xs.shape[0] === 0) { if(xs) xs.dispose(); if(ys) ys.dispose(); return; }
 
     isTraining = true;
-    // console.log(`Iniciando treinamento TF.js com ${xs.shape[0]} amostras.`);
     try {
         await model.fit(xs, ys, {
-            epochs: 15, // Ajustado
-            batchSize: Math.max(1, Math.floor(xs.shape[0] / 2) || 1), // Garante batchSize >= 1
-            shuffle: true,
-            callbacks: {
-                onEpochEnd: (epoch, logs) => {
-                    // if ((epoch + 1) % 5 === 0) console.log(`Época TF.js ${epoch + 1}: perda=${logs.loss.toFixed(4)}, acc=${logs.acc.toFixed(4)}`);
-                }
-            }
+            epochs: 10, batchSize: Math.max(1, Math.floor(xs.shape[0] / 3) || 1), shuffle: true,
+            callbacks: { onEpochEnd: (epoch, logs) => { /* console.log(`Época TF ${epoch+1}: L=${logs.loss.toFixed(3)} A=${logs.acc.toFixed(3)}`); */ } }
         });
-        // console.log("Treinamento TF.js concluído.");
-    } catch (error) {
-        console.error("Erro durante o treinamento TF.js:", error);
-    } finally {
-        isTraining = false;
-        xs.dispose();
-        ys.dispose();
-    }
+    } catch (error) { console.error("Erro Treinamento TF.js:", error); }
+    finally { isTraining = false; xs.dispose(); ys.dispose(); }
 }
 
-async function verificarSinalComML(coresRecentes) { // Recebe os últimos 20 já processados
-    if (typeof tf === 'undefined' || !model || !coresRecentes || coresRecentes.length < SEQUENCE_LENGTH) {
-        return [null, null, null];
-    }
-
-    const sequenciaParaPrever = coresRecentes.slice(0, SEQUENCE_LENGTH).reverse(); // Antigo->Novo
+async function verificarSinalComML(coresRecentes) {
+    if (typeof tf === 'undefined' || !model || !coresRecentes || coresRecentes.length < SEQUENCE_LENGTH) return [null, null, null];
+    const sequenciaParaPrever = coresRecentes.slice(0, SEQUENCE_LENGTH).reverse();
     if (sequenciaParaPrever.includes('verde')) return [null, null, null];
 
     let inputTensor;
@@ -162,127 +126,102 @@ async function verificarSinalComML(coresRecentes) { // Recebe os últimos 20 já
         inputTensor = colorsToInputTensor(sequenciaParaPrever);
         const prediction = model.predict(inputTensor);
         const predictionData = await prediction.data();
-        tf.dispose(prediction); // Limpar tensor de predição
+        tf.dispose(prediction);
 
-        const probVermelho = predictionData[0];
-        const probPreto = predictionData[1];
-        
+        const probVermelho = predictionData[0]; const probPreto = predictionData[1];
         let sinalGerado = null;
         if (probVermelho > probPreto && probVermelho >= ML_CONFIDENCE_THRESHOLD) sinalGerado = 'vermelho';
         else if (probPreto > probVermelho && probPreto >= ML_CONFIDENCE_THRESHOLD) sinalGerado = 'preto';
 
         if (sinalGerado) {
             const confianca = Math.max(probVermelho, probPreto);
-            console.info(`SINAL ML: ${sinalGerado.toUpperCase()} (Conf: ${(confianca * 100).toFixed(1)}%) | Gatilho: [${sequenciaParaPrever.join(',')}] (Antigo->Novo)`);
-            const coresGatilhoApiOrder = [...sequenciaParaPrever].reverse(); // Novo->Antigo
+            // console.info(`SINAL ML: ${sinalGerado.toUpperCase()} (Conf: ${(confianca * 100).toFixed(1)}%) | Gatilho: [${sequenciaParaPrever.join(',')}]`);
+            const coresGatilhoApiOrder = [...sequenciaParaPrever].reverse();
             return [sinalGerado, coresGatilhoApiOrder.join(','), coresGatilhoApiOrder];
         }
-    } catch (error) {
-        console.error("Erro na previsão com ML:", error);
-    } finally {
-        if (inputTensor) inputTensor.dispose();
-    }
+    } catch (error) { console.error("Erro na previsão ML:", error); }
+    finally { if (inputTensor) inputTensor.dispose(); }
     return [null, null, null];
 }
 
-// --- Funções Originais Adaptadas ---
+// --- Funções Principais do Bot ---
 function updateStatus(message, isError = false, isSuccess = false) {
     if (statusDiv) {
-        let iconClass = 'fa-info-circle';
-        let color = 'dodgerblue';
-        let titleMessage = `Info: ${message}`;
+        let iconClass = 'fa-info-circle'; let color = 'dodgerblue'; let titleMessage = `Info: ${message}`;
         if (isError) { iconClass = 'fa-times-circle'; color = 'crimson'; titleMessage = `Erro: ${message}`; }
         else if (isSuccess) { iconClass = 'fa-check-circle'; color = 'green'; titleMessage = `Status: ${message}`; }
-        statusDiv.innerHTML = `<i class="fas ${iconClass}"></i>`;
-        statusDiv.style.color = color;
-        statusDiv.title = titleMessage;
+        statusDiv.innerHTML = `<i class="fas ${iconClass}"></i>`; statusDiv.style.color = color; statusDiv.title = titleMessage;
     }
     if (isError) console.error(message);
-    // else console.log(message); 
 }
 
 async function obterCoresAPI() {
-    // console.log("Buscando dados da API via Worker (Onix)...");
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+        const controller = new AbortController(); const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
         const response = await fetch(API_URL, { method: 'GET', cache: 'no-store', signal: controller.signal });
         clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            let errorBody = "Erro Worker."; try { errorBody = await response.text(); } catch (e) {}
-            updateStatus(`Erro HTTP ${response.status} (Onix): ${response.statusText}`, true);
-            console.error("Erro Worker (Onix):", errorBody.substring(0, 200));
-            return null;
-        }
+        if (!response.ok) { updateStatus(`Erro HTTP ${response.status} (Onix)`, true); return null; }
         const dados = await response.json();
         if (dados && dados["Roleta Brasileira"] && Array.isArray(dados["Roleta Brasileira"])) {
             const numerosStr = dados["Roleta Brasileira"];
             if (numerosStr.length > 0) {
-                if (typeof identificarCor !== 'function') { // VERIFICAÇÃO IMPORTANTE
-                    console.error("Função `identificarCor` não está definida! Verifique `cores_roleta.js`.");
-                    updateStatus("Erro: `identificarCor` não definida.", true);
-                    return null;
-                }
+                if (typeof identificarCor !== 'function') { updateStatus("Erro: `identificarCor` não definida.", true); return null; }
                 const cores = numerosStr.slice(0, MAX_CORES_API).map(identificarCor);
                 const coresValidas = cores.filter(cor => cor !== 'inválido');
-                if (coresValidas.length === 0) {
-                    updateStatus("Nenhuma cor válida (Onix).", true); return null;
-                }
+                if (coresValidas.length === 0) { updateStatus("Nenhuma cor válida (Onix).", true); return null; }
                 return coresValidas;
             }
         }
         updateStatus("Dados API (Onix) formato inesperado.", true); return null;
     } catch (error) {
         if (error.name === 'AbortError') updateStatus("Timeout API (Onix).", true);
-        else updateStatus(`ERRO FETCH (Onix): ${error.message}`, true);
+        else updateStatus(`ERRO FETCH (Onix): ${error.message.substring(0,30)}`, true); // Mensagem mais curta
         console.error("Erro fetch (Onix):", error); return null;
     }
 }
 
-// Função para processar o sinal detectado (seja da ML ou de Padrões Fixos no futuro)
-function processarSinalDetectado(sinalDetectado, gatilhoIdentificador, coresGatilhoArray, forcarMartingale = false) {
-    if (!sinalDetectado) return false;
-
+// Função para definir e exibir um sinal (normal ou Martingale)
+function definirSinalAtivo(sinalCor, gatilhoId, coresGatilho, ehMartingaleIntent) {
+    if (!sinalCor) return false;
     const agora = Date.now();
-    // gatilhoIdentificador é uma string (seja da ML "V,P,V" ou JSON.stringify de array de padrão fixo)
 
-    if (!forcarMartingale) {
-        if (ultimosGatilhosProcessados[gatilhoIdentificador] && (agora - ultimosGatilhosProcessados[gatilhoIdentificador] < SIGNAL_COOLDOWN)) {
-            // console.log(`Cooldown para gatilho "${gatilhoIdentificador}" ativo. Sinal ignorado.`);
-            return false;
+    // Cooldown para o mesmo gatilho (sequência de cores)
+    // Só se aplica se NÃO for um Martingale forçado
+    if (!ehMartingaleIntent) {
+        if (ultimosGatilhosProcessados[gatilhoId] && (agora - ultimosGatilhosProcessados[gatilhoId] < SIGNAL_COOLDOWN)) {
+            return false; // Cooldown ativo
         }
-        const foiResolvidoRecentementeComMesmoGatilhoECores =
-            (agora - ultimoSinalResolvidoInfo.timestampResolvido < SIGNAL_COOLDOWN) &&
-            ultimoSinalResolvidoInfo.gatilhoPadrao === gatilhoIdentificador &&
-            JSON.stringify(ultimoSinalResolvidoInfo.coresQueFormaramGatilho) === JSON.stringify(coresGatilhoArray);
-
-        if (foiResolvidoRecentementeComMesmoGatilhoECores) {
-            // console.log("Gatilho idêntico resolvido recentemente. Sinal ignorado.");
-            return false;
+        const foiResolvidoRecentemente = (agora - ultimoSinalResolvidoInfo.timestampResolvido < SIGNAL_COOLDOWN) &&
+                                       ultimoSinalResolvidoInfo.gatilhoPadrao === gatilhoId &&
+                                       JSON.stringify(ultimoSinalResolvidoInfo.coresQueFormaramGatilho) === JSON.stringify(coresGatilho);
+        if (foiResolvidoRecentemente) {
+            return false; // Resolvido recentemente
         }
     }
 
     ultimoSinal = {
-        sinalEsperado: sinalDetectado,
-        gatilhoPadrao: gatilhoIdentificador,
+        sinalEsperado: sinalCor,
+        gatilhoPadrao: gatilhoId, // String da sequência de cores ML
         timestampGerado: agora,
-        coresOrigemSinal: [...coresGatilhoArray],
-        ehMartingale: forcarMartingale
+        coresOrigemSinal: [...coresGatilho],
+        ehMartingale: ehMartingaleIntent // Define se este sinal é uma tentativa de Martingale
     };
-    ultimosGatilhosProcessados[gatilhoIdentificador] = agora;
+    ultimosGatilhosProcessados[gatilhoId] = agora; // Atualiza cooldown para este gatilho
 
-    if (forcarMartingale) sinalOriginalParaMartingale = null;
+    // Se um Martingale foi definido com sucesso, limpamos a flag de "necessidade de Martingale"
+    if (ehMartingaleIntent) {
+        sinalOriginalParaMartingale = null;
+    }
 
     const sinalUpper = ultimoSinal.sinalEsperado.toUpperCase();
     let msgDisplay, textColor;
-    const origemSinal = gatilhoIdentificador.includes(',') ? "ML" : "FIXO"; // Identifica origem pela vírgula
+    const nomeSinal = "OPORTUNIDADE ENCONTRADA"; // Novo nome
 
     if (ultimoSinal.ehMartingale) {
-        msgDisplay = `🔄 MARTINGALE 1 (${origemSinal})\n➡️ Entrar no ${sinalUpper}`;
+        msgDisplay = `🔄 MARTINGALE 1\n➡️ Entrar no ${sinalUpper}`;
         textColor = "var(--secondary-color)";
     } else {
-        msgDisplay = `🎯 SINAL ${origemSinal}\n➡️ Entrar no ${sinalUpper}`;
+        msgDisplay = `🎯 ${nomeSinal}\n➡️ Entrar no ${sinalUpper}`;
         textColor = "var(--accent-color)";
     }
 
@@ -292,106 +231,82 @@ function processarSinalDetectado(sinalDetectado, gatilhoIdentificador, coresGati
         const placeholderDiv = sinalTextoP.querySelector('.signal-placeholder');
         if(placeholderDiv) placeholderDiv.remove();
     }
-    updateStatus(`Sinal ${origemSinal}: ${sinalUpper}${ultimoSinal.ehMartingale ? ' (Martingale 1)' : ''}`, false, false);
+    updateStatus(`Sinal: ${sinalUpper}${ultimoSinal.ehMartingale ? ' (Martingale 1)' : ''}`, false, false);
     return true;
 }
 
-function verificarResultadoSinal(novaCorRegistrada) {
-    if (!ultimoSinal.sinalEsperado && !sinalOriginalParaMartingale) return;
 
-    if (sinalOriginalParaMartingale) {
-        // Tentar gerar Martingale (esta lógica assume que `processarSinalDetectado` é chamado após uma análise)
-        // Para simplificar, o Martingale usará a mesma fonte de sinal que o original.
-        // Se o original foi ML, Martingale tentará ML. Se foi Fixo, tentará Fixo.
-        // Por agora, a lógica de Martingale não re-analisa, ela apenas inverte ou repete o sinal.
-        // A chamada a `gerenciarSinais` no seu código original era para re-verificar padrões.
-        // Vamos manter a tentativa de re-verificar, mas pode ser que não ache padrão para Martingale.
-        let sinalMartingaleGerado = false;
-        if (typeof tf !== 'undefined' && model && ultimosRegistradosAPI.length >= SEQUENCE_LENGTH) {
-            // Tenta gerar sinal de Martingale com ML.
-            // A lógica de "forcarMartingale=true" em processarSinalDetectado lida com o estado.
-            // Aqui precisamos decidir QUAL SINAL o Martingale deveria ser.
-            // Por simplicidade, o Martingale vai usar o mesmo sinal que falhou (ou o oposto, dependendo da estratégia).
-            // Este exemplo NÃO implementa uma estratégia de Martingale inteligente baseada em nova análise.
-            // Ele apenas define o estado de Martingale. A lógica de `processarSinalDetectado`
-            // será chamada no próximo ciclo de `mainLoop` se um sinal for detectado.
-            
-            // A lógica original chamava `gerenciarSinais(ultimosRegistradosAPI, true)`
-            // que por sua vez chamava `verificarPadrao`.
-            // Vamos simular isso:
-            // const [sinalMG, gatilhoMG, coresMG] = await verificarSinalComML(ultimosRegistradosAPI); // Se for ML
-            // if(sinalMG) { sinalMartingaleGerado = processarSinalDetectado(sinalMG, gatilhoMG, coresMG, true); }
-            // Por ora, a flag `sinalOriginalParaMartingale` é o principal. O próximo sinal detectado será Martingale.
-            // Se nenhum padrão/sinal for encontrado no próximo `mainLoop` para o Martingale, ele fica aguardando.
-             if (sinalTextoP && !sinalTextoP.innerHTML.includes("MARTINGALE")) {
-                 sinalTextoP.innerHTML = `⏳ Aguardando Martingale 1...`;
-                 sinalTextoP.style.color = "var(--warning-color)";
-            }
-            // A lógica de `mainLoop` tentará gerar um sinal que, se encontrado, será processado como Martingale.
-            return; // Sai para esperar o próximo ciclo do mainLoop tentar gerar o sinal de Martingale
-        }
-         return; // Se ML não está pronta, apenas espera.
+function verificarResultadoSinal(novaCorRegistrada) {
+    // Só processa se houver um sinal ativo (seja normal ou Martingale já definido)
+    if (!ultimoSinal.sinalEsperado) {
+        // Se `sinalOriginalParaMartingale` existe, significa que um sinal normal falhou,
+        // e estamos esperando o `mainLoop` tentar gerar o sinal de Martingale.
+        // Não fazemos nada aqui, `mainLoop` cuidará de chamar `definirSinalAtivo` para o Martingale.
+        return;
     }
 
-    const sinalResolvido = { ...ultimoSinal };
-    let msgResultado = "", resultadoCorTexto = "var(--accent-color)", cicloEncerrado = true;
+    const sinalResolvido = { ...ultimoSinal }; // Copia o sinal que estava ativo
+    let msgResultado = "", resultadoCorTexto = "var(--accent-color)";
+    let cicloGanho = false; // Indica se o ciclo (sinal ou sinal+MG) foi ganho
 
     if (novaCorRegistrada === 'verde') {
-        wins++; greenWins++;
-        msgResultado = sinalResolvido.ehMartingale ? (martingaleWins++, "🎯 MARTINGALE GANHO (VERDE)! 🎰") : "🎯 VITÓRIA NO VERDE! 🎰";
+        cicloGanho = true; // Verde sempre ganha o ciclo
+        greenWins++; // Conta como uma vitória verde separada
+        msgResultado = sinalResolvido.ehMartingale ? "🎯 MARTINGALE GANHO (VERDE)! 🎰" : "🎯 VITÓRIA NO VERDE! 🎰";
+        if(sinalResolvido.ehMartingale) martingaleWins++;
         resultadoCorTexto = "var(--green-color)";
     } else if (novaCorRegistrada === sinalResolvido.sinalEsperado) {
-        wins++;
-        msgResultado = sinalResolvido.ehMartingale ? (martingaleWins++, "🎯 MARTINGALE GANHO! ✅") : "🎯 ACERTO! ✅";
+        cicloGanho = true;
+        msgResultado = sinalResolvido.ehMartingale ? "🎯 MARTINGALE GANHO! ✅" : "🎯 ACERTO! ✅";
+        if(sinalResolvido.ehMartingale) martingaleWins++;
         resultadoCorTexto = "var(--success-color)";
-    } else {
-        if (sinalResolvido.ehMartingale) {
-            msgResultado = "❌ ERRO NO MARTINGALE! 👎"; losses++;
+    } else { // Perdeu a cor esperada
+        if (sinalResolvido.ehMartingale) { // Estava em Martingale e perdeu
+            msgResultado = "❌ ERRO NO MARTINGALE! 👎";
+            // `losses` será incrementado abaixo, pois o ciclo encerrou com perda
             resultadoCorTexto = "var(--danger-color)";
-        } else {
-            sinalOriginalParaMartingale = { ...sinalResolvido };
+        } else { // Era um sinal normal e perdeu -> Ativa intenção de Martingale
+            console.log(`Falha no sinal normal (${sinalResolvido.sinalEsperado}). Preparando para Martingale 1...`);
+            sinalOriginalParaMartingale = { ...sinalResolvido }; // Guarda o sinal que falhou
+            // Limpa o sinal ativo atual, o Martingale será definido no próximo ciclo do mainLoop se possível
             ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
-            cicloEncerrado = false;
-            // console.log(`Falha no sinal (${sinalOriginalParaMartingale.sinalEsperado}). Tentando Martingale 1...`);
-            // O mainLoop tentará gerar um novo sinal que será marcado como Martingale por processarSinalDetectado
-            // se sinalOriginalParaMartingale estiver setado.
-            // A chamada a `processarSinalDetectado` com `forcarMartingale=true` deve ser feita
-            // se um sinal for encontrado enquanto `sinalOriginalParaMartingale` está ativo.
-            // No `mainLoop`, se `sinalOriginalParaMartingale` existe, e um novo sinal é detectado,
-            // `processarSinalDetectado` será chamado com `forcarMartingale = true`.
-             if (sinalTextoP) {
-                sinalTextoP.innerHTML = `⏳ Aguardando Martingale 1...`;
-                sinalTextoP.style.color = "var(--warning-color)";
-            }
-            return; // Retorna para `mainLoop` tentar gerar o sinal de Martingale
+            // Não exibe mensagem de erro ainda, nem contabiliza perda. Espera o Martingale.
+            // Não exibe "Aguardando Martingale" aqui, pois mainLoop tentará definir o Martingale imediatamente.
+            return; // Retorna para mainLoop tentar o Martingale. O ciclo não encerrou.
         }
     }
 
-    if (cicloEncerrado) {
-        if (sinalTextoP) {
-            sinalTextoP.innerHTML = msgResultado.replace(/\n/g, '<br>');
-            sinalTextoP.style.color = resultadoCorTexto;
-        }
-        updateStatus(`Resultado (${sinalResolvido.sinalEsperado.toUpperCase()}): ${msgResultado.split('\n')[0]}`, false, resultadoCorTexto === "var(--success-color)" || resultadoCorTexto === "var(--green-color)");
-
-        setTimeout(() => {
-            const placeholderAtivo = sinalTextoP && sinalTextoP.querySelector('.signal-placeholder');
-            if (sinalTextoP && sinalTextoP.innerHTML.includes(msgResultado.split('\n')[0]) && !ultimoSinal.sinalEsperado && !placeholderAtivo ) {
-                 sinalTextoP.innerHTML = `<div class="signal-placeholder"><i class="fas fa-spinner fa-pulse"></i><span>Aguardando sinal...</span></div>`;
-                 sinalTextoP.style.color = "var(--gray-color)";
-            }
-        }, 7000);
-
-        ultimoSinalResolvidoInfo = {
-            gatilhoPadrao: sinalResolvido.gatilhoPadrao,
-            coresQueFormaramGatilho: sinalResolvido.coresOrigemSinal ? [...sinalResolvido.coresOrigemSinal] : null,
-            timestampResolvido: Date.now()
-        };
-        ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
-        sinalOriginalParaMartingale = null;
-        atualizarEstatisticasDisplay();
+    // Contabiliza vitória ou derrota do CICLO
+    if (cicloGanho) {
+        wins++;
+    } else { // Perdeu no Martingale ou era um sinal sem Martingale que perdeu (lógica de Martingale não ativada)
+        losses++;
     }
+
+    // Exibe resultado e limpa estado
+    if (sinalTextoP) {
+        sinalTextoP.innerHTML = msgResultado.replace(/\n/g, '<br>');
+        sinalTextoP.style.color = resultadoCorTexto;
+    }
+    updateStatus(`Resultado (${sinalResolvido.sinalEsperado.toUpperCase()}): ${msgResultado.split('\n')[0]}`, false, cicloGanho);
+
+    setTimeout(() => {
+        if (sinalTextoP && sinalTextoP.innerHTML.includes(msgResultado.split('\n')[0]) && !ultimoSinal.sinalEsperado) {
+             sinalTextoP.innerHTML = `<div class="signal-placeholder"><i class="fas fa-spinner fa-pulse"></i><span>Aguardando sinal...</span></div>`;
+             sinalTextoP.style.color = "var(--gray-color)";
+        }
+    }, 7000);
+
+    ultimoSinalResolvidoInfo = {
+        gatilhoPadrao: sinalResolvido.gatilhoPadrao,
+        coresQueFormaramGatilho: sinalResolvido.coresOrigemSinal ? [...sinalResolvido.coresOrigemSinal] : null,
+        timestampResolvido: Date.now()
+    };
+    ultimoSinal = { sinalEsperado: null, gatilhoPadrao: null, timestampGerado: null, coresOrigemSinal: null, ehMartingale: false };
+    sinalOriginalParaMartingale = null; // Ciclo encerrado, limpa intenção de Martingale
+    atualizarEstatisticasDisplay();
 }
+
 
 function atualizarEstatisticasDisplay() {
     if (winsSpan) winsSpan.textContent = wins;
@@ -401,8 +316,8 @@ function atualizarEstatisticasDisplay() {
     localStorage.setItem('roletaLosses', losses.toString());
     localStorage.setItem('roletaGreenWins', greenWins.toString());
     localStorage.setItem('roletaMartingaleWins', martingaleWins.toString());
-    const totalSinais = wins + losses;
-    const winRate = (totalSinais > 0) ? (wins / totalSinais * 100) : 0;
+    const totalCiclos = wins + losses; // Cada win/loss representa um ciclo completo.
+    const winRate = (totalCiclos > 0) ? (wins / totalCiclos * 100) : 0;
     if (winRateSpan) winRateSpan.textContent = winRate.toFixed(2) + "%";
 }
 
@@ -412,49 +327,45 @@ async function mainLoop() {
     const coresRecebidasDaAPI = await obterCoresAPI();
 
     if (coresRecebidasDaAPI && coresRecebidasDaAPI.length > 0) {
-        // Treinar o modelo com os dados mais recentes
-        if (typeof tf !== 'undefined' && model) { // Garante que tf e model existem
+        if (typeof tf !== 'undefined' && model) {
              await trainModelTF(coresRecebidasDaAPI);
         }
 
         const dadosMudaram = (JSON.stringify(coresRecebidasDaAPI) !== JSON.stringify(ultimosRegistradosAPI));
         if (dadosMudaram || ultimosRegistradosAPI.length === 0) {
-            ultimosRegistradosAPI = [...coresRecebidasDaAPI]; // Atualiza nosso "último conhecido"
+            ultimosRegistradosAPI = [...coresRecebidasDaAPI];
         }
 
-        // exibirCoresApi(ultimosRegistradosAPI); // Mostra os 20 da API já processados
-        if (statusDiv && !statusDiv.title.startsWith("Erro:") && !sinalOriginalParaMartingale && !ultimoSinal.sinalEsperado) {
+        if (statusDiv && !statusDiv.title.startsWith("Erro:") && !ultimoSinal.sinalEsperado && !sinalOriginalParaMartingale) {
              updateStatus("API OK (Onix). Monitorando...", false, true);
         }
 
-        // Verificar resultado de sinal ativo
-        if ((ultimoSinal.sinalEsperado || sinalOriginalParaMartingale) && dadosMudaram) {
-            verificarResultadoSinal(ultimosRegistradosAPI[0]); // Usa a cor mais recente
+        // 1. Resolver sinal ativo, se houver e os dados mudaram
+        if (ultimoSinal.sinalEsperado && dadosMudaram) { // Só resolve se um sinal *estiver ativo*
+            verificarResultadoSinal(ultimosRegistradosAPI[0]);
         }
-        
-        // Tentar gerar um novo sinal (normal ou de Martingale)
-        if (!ultimoSinal.sinalEsperado) { // Só tenta gerar se não houver sinal ativo
-            let sinalGerado = null, gatilhoDoSinal = null, coresDoGatilho = null;
 
-            if (typeof tf !== 'undefined' && model) { // Tenta com ML
-                const [sinalML, gatilhoMLStr, coresMLArr] = await verificarSinalComML(ultimosRegistradosAPI);
-                if (sinalML) {
-                    sinalGerado = sinalML; gatilhoDoSinal = gatilhoMLStr; coresDoGatilho = coresMLArr;
-                }
-            }
-            
-            // OPCIONAL: Fallback para padrões fixos se ML não der sinal e PADROES estiver definido
-            if (!sinalGerado && typeof PADROES !== 'undefined' && typeof verificarPadrao === 'function') {
-                // console.log("ML não gerou sinal ou não está pronta, tentando padrões fixos...");
-                const [sinalFixo, gatilhoFixoArr, coresFixoArr] = verificarPadrao(ultimosRegistradosAPI);
-                if (sinalFixo) {
-                    sinalGerado = sinalFixo; gatilhoDoSinal = JSON.stringify(gatilhoFixoArr); coresDoGatilho = coresFixoArr;
-                }
-            }
+        // 2. Tentar gerar um novo sinal (normal ou de Martingale)
+        // Só tenta se não houver um sinal já ativo E (ou estamos iniciando OU os dados mudaram para evitar reprocessar o mesmo estado)
+        if (!ultimoSinal.sinalEsperado && (dadosMudaram || ultimosRegistradosAPI.length === MAX_CORES_API )) { // MAX_CORES_API usado para o primeiro preenchimento
+            if (sinalOriginalParaMartingale) { // Tentativa de Martingale
+                // Para o Martingale, o SINAL é a MESMA COR do sinal que falhou.
+                // O GATILHO pode ser a mesma sequência de cores que levou à falha.
+                const corMartingale = sinalOriginalParaMartingale.sinalEsperado;
+                const gatilhoOriginal = sinalOriginalParaMartingale.gatilhoPadrao; // string da sequência
+                const coresOriginais = sinalOriginalParaMartingale.coresOrigemSinal; // array de cores
 
-            if (sinalGerado) {
-                // Se `sinalOriginalParaMartingale` está setado, este novo sinal é uma tentativa de Martingale.
-                processarSinalDetectado(sinalGerado, gatilhoDoSinal, coresDoGatilho, !!sinalOriginalParaMartingale);
+                console.log(`Tentando definir Martingale para: ${corMartingale.toUpperCase()}`);
+                definirSinalAtivo(corMartingale, gatilhoOriginal, coresOriginais, true);
+                // `sinalOriginalParaMartingale` será limpo dentro de `definirSinalAtivo` se o Martingale for setado.
+
+            } else { // Tentativa de sinal normal
+                if (typeof tf !== 'undefined' && model) {
+                    const [sinalML, gatilhoMLStr, coresMLArr] = await verificarSinalComML(ultimosRegistradosAPI);
+                    if (sinalML) {
+                        definirSinalAtivo(sinalML, gatilhoMLStr, coresMLArr, false);
+                    }
+                }
             }
         }
     }
@@ -489,7 +400,7 @@ function zerarEstatisticas() {
 
 // --- Inicialização ---
 document.addEventListener('DOMContentLoaded', () => {
-    if (sinalTextoP && !sinalTextoP.textContent.includes("SINAL") && !sinalTextoP.textContent.includes("MARTINGALE")) {
+    if (sinalTextoP && !sinalTextoP.textContent.includes("OPORTUNIDADE") && !sinalTextoP.textContent.includes("MARTINGALE")) {
         sinalTextoP.innerHTML = `<div class="signal-placeholder"><i class="fas fa-spinner fa-pulse"></i><span>Aguardando sinal...</span></div>`;
         sinalTextoP.style.color = "var(--gray-color)";
     }
@@ -504,21 +415,19 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("TensorFlow.js (tf) não carregado! Funcionalidade de ML desabilitada.");
         updateStatus("Erro: TensorFlow.js não carregado!", true);
     } else {
-        model = createModelTF(); // Cria o modelo
+        model = createModelTF();
     }
 
     atualizarEstatisticasDisplay();
     lastStatsLogTime = Date.now();
-    mainLoop(); // Primeira chamada
+    mainLoop();
     setInterval(mainLoop, CHECK_INTERVAL);
 
     if (refreshIframeButton) {
         refreshIframeButton.addEventListener('click', () => {
             zerarEstatisticas();
             if (casinoIframe) {
-                console.log("Atualizando iframe do cassino...");
-                const currentSrc = casinoIframe.src;
-                casinoIframe.src = 'about:blank';
+                const currentSrc = casinoIframe.src; casinoIframe.src = 'about:blank';
                 setTimeout(() => { casinoIframe.src = currentSrc; }, 100);
                 updateStatus("Iframe atualizado, estatísticas zeradas.", false, false);
             }
