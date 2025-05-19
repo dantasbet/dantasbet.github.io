@@ -1,7 +1,7 @@
 // script.js (Frontend com TensorFlow.js para API Onix - CORRIGIDO)
 
 // --- Configuration ---
-const TARGET_API_URL = 'https://onixapis.com:2053/public/api/pragmatic/227';
+const TARGET_API_URL = 'https://onixapis.com:2053/public/api/pragmatic/237';
 const PROXY_WORKER_URL = 'https://proxy-worker-roleta.dantasbet.workers.dev/';
 const API_URL = `${PROXY_WORKER_URL}?url=${encodeURIComponent(TARGET_API_URL)}`;
 
